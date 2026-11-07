@@ -1,0 +1,28 @@
+{
+  "name": "arma-mcp-server",
+  "version": "0.5.13",
+  "private": true,
+  "description": "Arma 3 MCP server — SQF exec, mission telemetry, RPT tools, launcher",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=bundle/index.mjs --banner:js=\"import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);\"",
+    "test": "tsx --test test/*.test.ts",
+    "fake": "tsx test/fake_dll.ts",
+    "smoke": "tsx test/mcp_smoke.ts",
+    "bench": "tsx test/bench_latency.ts",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

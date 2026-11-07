@@ -1,0 +1,33 @@
+{
+  "name": "arma-mcp",
+  "version": "0.5.13",
+  "description": "에이전트가 Arma 3 를 다루는 호스트 중립 다중 세션 MCP — 라이브 SQF 실행, 텔레메트리, RPT 검증, 클라이언트 없는 전용 서버와 멀티플레이 자동화.",
+  "author": {
+    "name": "AHC"
+  },
+  "homepage": "https://github.com/AHC-Clan/Arma-MCP",
+  "repository": "https://github.com/AHC-Clan/Arma-MCP.git",
+  "license": "MIT",
+  "keywords": ["arma", "arma3", "mcp", "sqf", "rpt"],
+  "mcpServers": {
+    "arma": {
+      "command": "node",
+      "args": ["./server/bundle/index.mjs", "relay"],
+      "cwd": "."
+    }
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Arma 3 MCP",
+    "shortDescription": "Arma 3 제어 및 자동 검증",
+    "longDescription": "여러 Claude/Codex 세션이 하나의 Arma 브리지를 공유하며 SQF 실행, 미션·RPT 조회, 클라이언트 없는 전용 서버 실행, 웹 게시와 화면 캡처를 수행한다.",
+    "developerName": "AHC",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Arma MCP로 현재 게임·브리지 상태를 확인해 줘.",
+      "최신 Arma RPT에서 오류를 찾아 원인을 설명해 줘.",
+      "테스트 미션을 실행하고 화면과 RPT로 검증해 줘."
+    ]
+  }
+}

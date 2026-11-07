@@ -1,0 +1,29 @@
+node_modules/
+dist/
+*.log
+
+# 로컬 머신 설정 (경로/비밀 포함) — example만 커밋
+arma-mcp.config.json
+
+# C++ 빌드 산출물
+extension/build/
+build/bin/
+
+# HEMTT 산출물
+addon/.hemttout/
+addon/releases/
+
+# 벤더링 도구는 용량 문제로 제외 (build/get-hemtt.ps1 로 복사)
+.tools/
+
+# 에이전트 호스트 로컬 설정 (머신별 권한 등)
+.claude/settings.local.json
+
+# 로컬 dev MCP 설정 (머신별 절대경로) — .mcp.json.example 만 커밋.
+# 실제 배포는 Claude Code/Codex 전용 plugin manifest의 mcpServers로 이뤄진다.
+.mcp.json
+
+# 편집기와 화면 도구의 로컬 파일
+.vscode/
+.mmcomputer/
+.mmreport/

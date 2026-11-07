@@ -1,0 +1,17 @@
+=====================================================================
+== J:\Program Files (x86)\Steam\steamapps\common\Arma 3\Arma3_x64.exe
+== "Arma3_x64.exe" -skipIntro -noSplash -noPause -mod="D:\Mods\@core;J:\Program Files (x86)\Steam\steamapps\common\Arma 3\!Workshop\@RHSAFRF" -autotest="C:\tmp\a.cfg"
+=====================================================================
+Original output filename: Arma3_x64
+ 9:00:00 [ArmaMCP] init server bridge on Altis (co40_fake)
+ 9:00:01 [ArmaMCP][EXEC] mode=server reqId=aabbcc code=1+1
+ 9:00:02 "hello from mission"
+ 9:00:03 Error in expression <_undef + 1>
+ 9:00:03   Error position: <_undef + 1>
+ 9:00:03   Error Undefined variable in expression: _undef
+ 9:00:04 [ArmaMCP][EXEC] result <- server: SCALAR: 2
+ 9:00:05 Warning Message: Script z\arma_mcp\bad.sqf not found
+ 9:00:06 some ordinary log line
+ 9:00:07 Error in expression <call {throw "boom"}>
+ 9:00:07   Error position: <throw "boom"}>
+ 9:00:07   Error Generic error in expression

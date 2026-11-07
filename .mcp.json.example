@@ -1,0 +1,13 @@
+{
+  "_comment": "저장소 개발용 relay 설정. 먼저 서버 컴퓨터에서 `node server/bundle/index.mjs daemon`을 실행하고 실제 token을 넣는다. 여러 relay 세션은 하나의 daemon/game pipe를 공유하지만, 같은 호스트에 플러그인과 이 파일을 중복 등록하면 툴이 중복 표시되므로 등록 방식은 하나만 선택한다.",
+  "mcpServers": {
+    "arma": {
+      "command": "node",
+      "args": ["C:\\path\\to\\Arma-MCP\\server\\dist\\index.js", "relay"],
+      "env": {
+        "ARMA_MCP_CONFIG": "C:\\path\\to\\Arma-MCP\\arma-mcp.config.json",
+        "ARMA_MCP_TOKEN": "replace-with-the-token-created-by-daemon"
+      }
+    }
+  }
+}

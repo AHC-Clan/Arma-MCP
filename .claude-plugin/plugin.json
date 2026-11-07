@@ -1,0 +1,19 @@
+{
+  "name": "arma-mcp",
+  "displayName": "Arma 3 MCP",
+  "version": "0.5.13",
+  "description": "에이전트가 Arma 3 를 다루는 다중 세션 MCP — 라이브 SQF 실행, 미션 텔레메트리, RPT 검증, 클라이언트 없는 전용 서버 실행, 멀티플레이 테스트, 웹 게시, 화면 캡처.",
+  "author": {
+    "name": "AHC"
+  },
+  "homepage": "https://github.com/AHC-Clan/Arma-MCP",
+  "repository": "https://github.com/AHC-Clan/Arma-MCP.git",
+  "license": "MIT",
+  "keywords": ["arma", "arma3", "mcp", "sqf", "rpt"],
+  "mcpServers": {
+    "arma": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/bundle/index.mjs", "relay"]
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# 텍스트 파일은 LF 로 정규화(저장소 내부). 체크아웃 시 OS 기본을 따른다.
+* text=auto
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+
+# 스크립트/소스는 명시적으로 LF (SQF/C++/TS/PS1 모두 LF 로 정상 동작).
+*.ts   text eol=lf
+*.mjs  text eol=lf
+*.sqf  text eol=lf
+*.cpp  text eol=lf
+*.hpp  text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.json.example text eol=lf
+*.toml text eol=lf
+
+# 셸 스크립트 심. CRLF 면 sh 가 #!/bin/sh\r 을 찾지 못한다. 확장자가 없어 따로 적는다.
+bin/arma-mcp text eol=lf
+
+# PowerShell / 배치 파일은 CRLF 를 선호.
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Bundled MCP SDK contains the protocol-significant SSE line "data: ".
+# It is generated verbatim; do not flag that literal as source whitespace.
+server/bundle/index.mjs whitespace=-blank-at-eol
+
+# 바이너리(혹시 커밋될 경우).
+*.dll  binary
+*.pbo  binary
+*.exe  binary
+*.bikey binary

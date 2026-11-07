@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project name="AHC_ArmaMCP">
+    <Package name="Connect">
+        <Key ID="STR_AHC_ArmaMCP_BattlEye">
+            <Original>BattlEye를 끄고 게임을 다시 시작해 주세요.</Original>
+            <English>Turn off BattlEye and restart the game.</English>
+            <Korean>BattlEye를 끄고 게임을 다시 시작해 주세요.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_CheckAgain">
+            <Original>다시 찾기</Original>
+            <English>Check Again</English>
+            <Korean>다시 찾기</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Checking">
+            <Original>이 PC를 확인하고 있습니다.</Original>
+            <English>Checking this PC.</English>
+            <Korean>이 PC를 확인하고 있습니다.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Close">
+            <Original>닫기</Original>
+            <English>Close</English>
+            <Korean>닫기</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Connect">
+            <Original>연결</Original>
+            <English>Connect</English>
+            <Korean>연결</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Connected">
+            <Original>연결됨</Original>
+            <English>Connected</English>
+            <Korean>연결됨</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Connecting">
+            <Original>연결 중</Original>
+            <English>Connecting</English>
+            <Korean>연결 중</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Copied">
+            <Original>복사됨</Original>
+            <English>Copied</English>
+            <Korean>복사됨</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Copy">
+            <Original>복사</Original>
+            <English>Copy</English>
+            <Korean>복사</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_CopyDetails">
+            <Original>내용 복사</Original>
+            <English>Copy Details</English>
+            <Korean>내용 복사</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_FailConnect">
+            <Original>연결하지 못했습니다</Original>
+            <English>Could not connect</English>
+            <Korean>연결하지 못했습니다</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_FailLead">
+            <Original>다시 시도해 주세요. 계속 안 되면 아래 내용을 전달해 주세요.</Original>
+            <English>Please try again. If it keeps failing, send the details below.</English>
+            <Korean>다시 시도해 주세요. 계속 안 되면 아래 내용을 전달해 주세요.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Found">
+            <Original>이 PC에서 찾았습니다</Original>
+            <English>Found on this PC</English>
+            <Korean>이 PC에서 찾았습니다</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Get">
+            <Original>받기</Original>
+            <English>Get</English>
+            <Korean>받기</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Lead">
+            <Original>Claude Code나 Codex가 Arma를 직접 띄우고 시험합니다.</Original>
+            <English>Claude Code or Codex can launch and test Arma for you.</English>
+            <Korean>Claude Code나 Codex가 Arma를 직접 띄우고 시험합니다.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NeedApp">
+            <Original>Claude Code나 Codex가 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Original>
+            <English>You need Claude Code or Codex. Install one, then choose Check Again.</English>
+            <Korean>Claude Code나 Codex가 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NeedGit">
+            <Original>연결하려면 Git이 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Original>
+            <English>Connecting needs Git. Install it, then choose Check Again.</English>
+            <Korean>연결하려면 Git이 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NeedNode">
+            <Original>연결하려면 Node.js가 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Original>
+            <English>Connecting needs Node.js. Install it, then choose Check Again.</English>
+            <Korean>연결하려면 Node.js가 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NeedNodeGit">
+            <Original>연결하려면 Node.js와 Git이 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Original>
+            <English>Connecting needs Node.js and Git. Install them, then choose Check Again.</English>
+            <Korean>연결하려면 Node.js와 Git이 필요합니다. 설치한 뒤 다시 찾기를 눌러 주세요.</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NotInstalled">
+            <Original>설치되어 있지 않습니다</Original>
+            <English>Not installed</English>
+            <Korean>설치되어 있지 않습니다</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NoteOpenChat">
+            <Original>이미 열어 둔 대화에는 적용되지 않습니다</Original>
+            <English>Conversations already open are not affected</English>
+            <Korean>이미 열어 둔 대화에는 적용되지 않습니다</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NoteRemove">
+            <Original>언제든 이 창에서 해제할 수 있습니다</Original>
+            <English>You can disconnect here at any time</English>
+            <Korean>언제든 이 창에서 해제할 수 있습니다</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_NoteWorking">
+            <Original>창을 닫아도 설치는 끝까지 진행됩니다</Original>
+            <English>Setup keeps going if you close this window</English>
+            <Korean>창을 닫아도 설치는 끝까지 진행됩니다</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Remove">
+            <Original>해제</Original>
+            <English>Disconnect</English>
+            <Korean>해제</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Retry">
+            <Original>다시 시도</Original>
+            <English>Try Again</English>
+            <Korean>다시 시도</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_SayPrompt">
+            <Original>새 대화를 열고 이렇게 말해 보세요</Original>
+            <English>Open a new conversation and try saying</English>
+            <Korean>새 대화를 열고 이렇게 말해 보세요</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_SayText">
+            <Original>Arma 상태 확인해 줘</Original>
+            <English>Check the Arma status</English>
+            <Korean>Arma 상태 확인해 줘</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_StepInstall">
+            <Original>플러그인 설치 중</Original>
+            <English>Installing the plugin</English>
+            <Korean>플러그인 설치 중</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_StepMarketplace">
+            <Original>플러그인 저장소 등록 중</Original>
+            <English>Adding the plugin source</English>
+            <Korean>플러그인 저장소 등록 중</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_StepRemove">
+            <Original>해제 중</Original>
+            <English>Disconnecting</English>
+            <Korean>해제 중</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_StepVerify">
+            <Original>확인 중</Original>
+            <English>Checking</English>
+            <Korean>확인 중</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Title">
+            <Original>AI 에이전트 연결</Original>
+            <English>Connect AI Agent</English>
+            <Korean>AI 에이전트 연결</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_TitleConnected">
+            <Original>AI 에이전트 연결됨</Original>
+            <English>AI Agent Connected</English>
+            <Korean>AI 에이전트 연결됨</Korean>
+        </Key>
+        <Key ID="STR_AHC_ArmaMCP_Tooltip">
+            <Original>Claude Code나 Codex가 Arma를 다루게 합니다</Original>
+            <English>Lets Claude Code or Codex work with Arma</English>
+            <Korean>Claude Code나 Codex가 Arma를 다루게 합니다</Korean>
+        </Key>
+    </Package>
+</Project>

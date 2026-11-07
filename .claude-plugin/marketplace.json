@@ -1,0 +1,33 @@
+{
+  "name": "ahc",
+  "owner": {
+    "name": "bornsoul"
+  },
+  "description": "AHC Arma 3 개발 도구 마켓플레이스",
+  "plugins": [
+    {
+      "name": "arma-mcp",
+      "source": "./",
+      "description": "Arma 3 다중 세션 MCP — 라이브 SQF, 텔레메트리, RPT 검증, 클라이언트 없는 전용 서버와 멀티플레이 자동화.",
+      "version": "0.5.13",
+      "author": {
+        "name": "AHC"
+      },
+      "keywords": [
+        "arma",
+        "arma3",
+        "mcp",
+        "sqf",
+        "rpt"
+      ],
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ],
+  "interface": {
+    "displayName": "AHC"
+  }
+}

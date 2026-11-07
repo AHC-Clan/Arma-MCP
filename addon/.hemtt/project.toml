@@ -1,0 +1,17 @@
+name = "AHC Arma MCP"
+prefix = "ahc"
+author = "AHC"
+
+[version]
+major = 0
+minor = 5
+patch = 13
+build = 0
+git_hash = 0   # not tracking a git hash in the version string
+
+# CBA is OPTIONAL at runtime — the addon detects it (fn_hasCba) and falls back to
+# vanilla EachFrame polling + remoteExec when CBA is absent. It never appears in
+# requiredAddons, so @arma_mcp loads standalone.
+#
+# NOTE: build-pbo.ps1 uses `hemtt build` (NOT release) for local dev — no signing,
+# no bikeys. It trusts only HEMTT's exit code; lint hints on stderr are not failures.

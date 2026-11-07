@@ -1,0 +1,6 @@
+#!/bin/sh
+# Git Bash 가 인자를 Windows 경로로 바꾸지 않게 한다. SQF, 정규식, key=value 가 쓴 그대로 간다.
+# 경로 플래그의 /d/... 는 CLI 가 D:\... 로 바꾼다.
+export MSYS2_ARG_CONV_EXCL='*'
+root=$(cd "$(dirname "$0")/.." && (pwd -W 2>/dev/null || pwd))
+exec node "$root/server/bundle/index.mjs" cli "$@"

@@ -1,0 +1,63 @@
+{
+  "pipeName": "\\\\.\\pipe\\arma_mcp",
+  "tcp": { "enabled": false, "host": "127.0.0.1", "port": 5301 },
+  "rptDir": "",
+  "arma": {
+    "exePath": "",
+    "serverExePath": "",
+    "baseArgs": [
+      "-skipIntro",
+      "-noSplash",
+      "-noPauseAudio"
+    ],
+    "fallbackMods": [],
+    "modSwaps": [],
+    "selfModPath": "",
+    "missionsDir": "",
+    "profilesFile": ""
+  },
+  "mp": {
+    "port": 2302,
+    "password": "",
+    "adminPassword": "armamcp",
+    "hostname": "arma-mcp test server",
+    "maxPlayers": 8,
+    "profilesDir": "",
+    "mpMissionsDir": "",
+    "serverBaseArgs": [],
+    "extraCfgLines": []
+  },
+  "stacks": {
+    "root": "",
+    "max": 4,
+    "maxClients": 4,
+    "portStep": 10,
+    "testModMaxMB": 512,
+    "overlayCopyMaxMB": 1024,
+    "windowWidth": 1600,
+    "windowHeight": 900
+  },
+  "windowTiler": { "enabled": true, "stacks": [], "focusGuard": true },
+  "exec": { "defaultTimeoutMs": 5000, "maxCodeBytes": 131072 },
+  "capture": { "dir": "", "keepMax": 100 },
+  "mcp": {
+    "port": 5303,
+    "path": "/mcp",
+    "tokenFile": "",
+    "allowedOrigins": [],
+    "maxSessions": 16,
+    "idleTimeoutMs": 1800000,
+    "maxCliSessions": 8,
+    "cliIdleTimeoutMs": 60000,
+    "maxBodyBytes": 6291456
+  },
+  "web": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 5302,
+    "rootDir": "",
+    "publicBaseUrl": ""
+  },
+  "logLevel": "info",
+  "logFile": ""
+}

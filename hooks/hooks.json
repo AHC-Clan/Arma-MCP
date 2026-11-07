@@ -1,0 +1,19 @@
+{
+  "description": "세션 시작 시 Arma-MCP 플러그인 버전을 확인하고 새 버전이 있으면 백그라운드로 설치한다.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/server/bundle/index.mjs\" selfupdate hook --root \"${CLAUDE_PLUGIN_ROOT}\" --cli claude",
+            "commandWindows": "node \"${CLAUDE_PLUGIN_ROOT}/server/bundle/index.mjs\" selfupdate hook --root \"${CLAUDE_PLUGIN_ROOT}\" --cli claude",
+            "timeout": 10,
+            "statusMessage": "Arma-MCP 플러그인 업데이트 확인 중"
+          }
+        ]
+      }
+    ]
+  }
+}
