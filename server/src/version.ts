@@ -1,5 +1,5 @@
 /** One source of truth for daemon, relay handshake, and MCP server metadata. */
-export const ARMA_MCP_VERSION = '0.5.13';
+export const ARMA_MCP_VERSION = '0.5.14';
 
 /**
  * 'a.b.c' 숫자 비교. 같으면 0, 왼쪽이 크면 양수.

@@ -248,7 +248,7 @@ void Bridge::WorkerLoop() {
         backoff = 250ms;
 
         // Greet the server so it can log/validate the peer.
-        ipc_.SendFrame(BuildHello("ArmaMCP 0.5.13", CurrentPid()));
+        ipc_.SendFrame(BuildHello("ArmaMCP 0.5.14", CurrentPid()));
 
         ipc_.SetFrameHandler([this](const std::string& payload) { OnInboundFrame(payload); });
 

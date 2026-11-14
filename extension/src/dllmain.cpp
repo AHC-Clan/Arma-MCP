@@ -59,7 +59,7 @@ ahc::Bridge g_bridge;
 
 // Set by the engine on the calling thread right before each RVExtension* call.
 thread_local ahc::connect::CallContext t_callContext;
-const char* const kVersion = "ArmaMCP 0.5.13";
+const char* const kVersion = "ArmaMCP 0.5.14";
 
 void WriteOutput(char* output, int outputSize, const std::string& s) {
     if (output == nullptr || outputSize <= 0) return;

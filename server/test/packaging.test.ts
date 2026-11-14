@@ -83,7 +83,7 @@ test('Claude/Codex 플러그인 이름·버전·마켓 source가 일치한다', 
   assert.ok(entry, 'marketplace에 arma-mcp 항목이 있어야 한다');
   assert.equal(claude.name, 'arma-mcp');
   assert.equal(codex.name, claude.name);
-  assert.equal(pkg.version, '0.5.13');
+  assert.equal(pkg.version, '0.5.14');
   assert.equal(claude.version, pkg.version);
   assert.equal(codex.version, pkg.version);
   assert.equal(entry.version, pkg.version);
@@ -223,22 +223,22 @@ test('docs/cli.md 가 모든 명령과 종료 코드를 다루고 문체 규칙�
   assert.doesNotMatch(doc, /및/);
 });
 
-test('0.5.13 릴리스 버전이 서버·DLL·애드온 메타데이터에 동기화된다', () => {
-  const expected = '0.5.13';
+test('0.5.14 릴리스 버전이 서버·DLL·애드온 메타데이터에 동기화된다', () => {
+  const expected = '0.5.14';
 
   assert.match(
     readText('server/src/version.ts'),
-    /ARMA_MCP_VERSION\s*=\s*'0\.5\.13'/,
+    /ARMA_MCP_VERSION\s*=\s*'0\.5\.14'/,
   );
-  assert.match(readText('extension/src/dllmain.cpp'), /ArmaMCP 0\.5\.13/);
-  assert.match(readText('extension/src/Bridge.cpp'), /ArmaMCP 0\.5\.13/);
-  assert.match(readText('addon/addons/arma_mcp/config.cpp'), /version\s*=\s*"0\.5\.13"/);
-  assert.match(readText('docs/protocol.md'), /"ver":"ArmaMCP 0\.5\.13"/);
+  assert.match(readText('extension/src/dllmain.cpp'), /ArmaMCP 0\.5\.14/);
+  assert.match(readText('extension/src/Bridge.cpp'), /ArmaMCP 0\.5\.14/);
+  assert.match(readText('addon/addons/arma_mcp/config.cpp'), /version\s*=\s*"0\.5\.14"/);
+  assert.match(readText('docs/protocol.md'), /"ver":"ArmaMCP 0\.5\.14"/);
 
   const hemtt = readText('addon/.hemtt/project.toml');
   assert.match(hemtt, /\[version\][\s\S]*?major\s*=\s*0/);
   assert.match(hemtt, /\[version\][\s\S]*?minor\s*=\s*5/);
-  assert.match(hemtt, /\[version\][\s\S]*?patch\s*=\s*13/);
+  assert.match(hemtt, /\[version\][\s\S]*?patch\s*=\s*14/);
   assert.equal(expected, readJson<PackageJson>('server/package.json').version);
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "arma-mcp",
-  "version": "0.5.13",
+  "version": "0.5.14",
   "description": "에이전트가 Arma 3 를 다루는 호스트 중립 다중 세션 MCP — 라이브 SQF 실행, 텔레메트리, RPT 검증, 클라이언트 없는 전용 서버와 멀티플레이 자동화.",
   "author": {
     "name": "AHC"

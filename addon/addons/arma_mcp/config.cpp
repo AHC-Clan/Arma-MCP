@@ -12,7 +12,7 @@ class CfgPatches {
         requiredAddons[] = {"A3_Ui_F"};
         // hashValue (fn_onExec) needs Arma 2.10+ (2022).
         requiredVersion = 2.10;
-        version = "0.5.13";
+        version = "0.5.14";
     };
 };
 

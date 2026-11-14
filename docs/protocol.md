@@ -37,7 +37,7 @@ MCP 서버(Node/TS) ↔ `arma_mcp_x64.dll`(인게임 확장) 간 계약 문서. 
 
 ### hello
 ```json
-{"v":1,"type":"hello","role":"arma-ext","ver":"ArmaMCP 0.5.13","pid":4242}
+{"v":1,"type":"hello","role":"arma-ext","ver":"ArmaMCP 0.5.14","pid":4242}
 ```
 - `pid`: 게임 프로세스 id(0.5.0 부터). 라우팅에는 쓰지 않고 `arma_status` 의 `dllPid` 진단에만 쓴다.
   이전 DLL 은 보내지 않는다.
