@@ -668,6 +668,10 @@ Arma 는 메시지로 보낸 클릭을 받지 않는다. 화면 도구로 누를
 | 15 | 다른 미션을 연다(`MissionLoad`) | 연결이 다시 서고 gen 이 오른다. RPT 에 매 프레임 오류가 없다 | |
 | 16 | 에디터를 닫고 메인 화면으로 | 15초 안에 `linkPhase` 가 `none` 이나 `pre-bridge`. 메인 화면 연결 창이 그대로 동작한다 | |
 | 17 | 회귀: 같은 PBO 로 `arma-mcp play --modset none` | 미션 브리지가 전과 같다. RPT 오류가 없다 | |
+| 18 | `arma_eden_find { kind:"module", query:"<패널에 보이는 모듈 이름>" }` 와 `{ kind:"object", query:"<패널의 빈 물체 이름>" }` | 자산 패널에 보이는 이름과 경로로 나온다. 에디터에만 있는 모듈(Zeus 목록에 없는 것)이 나오고 `zeus:false` 다. 첫 호출 `exec.durationMs` 를 적는다 | 패널에 없는 것이 섞이거나 있는 것이 빠지면 그 클래스의 `scope`, `scopeCurator`, `editorCategory` 를 적어 색인 기준을 고친다 |
+| 19 | 18 의 결과 `place` 를 그대로 `arma_eden_place` 에 | 모듈은 `type:'logic'` 으로 만들어진다 | |
+| 20 | 원점이 치우친 모델(`Land_Cargo_House_V1_F`)을 `at:[x,y]` 로 놓고, 그 앞에 `beside` 로 하나 더 | `created[].at` 이 준 `[x, y]` 와 0.05 m 안에서 같다. `beside` 한 것이 맞닿고 `overlaps` 에 서로가 없다 | 어긋나면 `_center` 가 방향을 넣은 뒤가 아니라 앞에서 쟀다 |
+| 21 | 에디터에서 `arma_zeus_find { source:"palette", query:"x" }` | 게임에 보내지 않고 `ok:false`, `hint` 에 `arma_eden_find`. RPT 에 그 시각의 `[EXEC]` 줄이 없다 | |
 
 체크포인트.
 

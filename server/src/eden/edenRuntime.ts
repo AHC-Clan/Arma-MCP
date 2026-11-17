@@ -4,6 +4,7 @@
 // 판정(지면, 겹침)을 만든다. 배치 관계(위에, 옆에, 바라보게)는 여기서 좌표로 푼다.
 
 import type { SqfValue } from '../zeus/sqfValue.js';
+import { groupTemplateExpr } from '../zeus/zeusRuntime.js';
 import {
   besidePos,
   bearing,
@@ -15,9 +16,46 @@ import {
   type OverlapPair,
   type Side,
 } from './edenGeom.js';
-import { GEOM, RF, type EdenMode, type ZRule } from './edenSqf.js';
+import { AF, GEOM, RF, type EdenMode, type ZRule } from './edenSqf.js';
 
 const KINDS: readonly string[] = ['unit', 'vehicle', 'object', 'logic', 'trigger', 'marker', 'map'];
+
+/** 자산 종류에서 arma_eden_place 의 type 으로. group 은 place 로 놓지 않는다. */
+const PLACE_TYPE: Record<string, EdenType | undefined> = {
+  unit: 'object',
+  vehicle: 'object',
+  object: 'object',
+  module: 'logic',
+  marker: 'marker',
+};
+
+/**
+ * 자산 행(edenSqf.ts 의 ASSET_ROW) 하나를 응답 모양으로. place 는 arma_eden_place 의 항목에 그대로 넣을 값이다.
+ * 그룹은 place 로 놓지 않고 config 경로(sqf)를 준다.
+ */
+export function mapAssetRow(r: SqfValue[]): Record<string, unknown> {
+  const [kind, cls, label, path, side, flags, score] = r;
+  const k = typeof kind === 'string' ? kind : '';
+  const c = typeof cls === 'string' ? cls : '';
+  const f = typeof flags === 'number' ? flags : 0;
+  const out: Record<string, unknown> = { kind: k, label: typeof label === 'string' ? label : '' };
+  if (k === 'group') {
+    out.class = c.split('|').pop() ?? c;
+    out.sqf = groupTemplateExpr(c);
+  } else {
+    out.class = c;
+  }
+  if (typeof path === 'string' && path !== '') out.path = path;
+  if (typeof side === 'string' && side !== '') out.side = side;
+  if (k === 'module') {
+    out.is3DEN = (f & AF.is3DEN) !== 0;
+    out.zeus = (f & AF.zeus) !== 0;
+  }
+  const t = PLACE_TYPE[k];
+  if (t) out.place = t === 'object' ? { class: c } : { class: c, type: t };
+  if (typeof score === 'number') out.score = score;
+  return out;
+}
 
 export interface RowFlags {
   selected: boolean;

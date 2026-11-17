@@ -321,8 +321,9 @@ export function registerStatusTool(server: ToolHost, shared: Deps): void {
       // 실행 취소 묶음과 배치 판정이 빠진다.
       if (connected && snap.editor === true) {
         hints.push(
-          'Eden 에디터에 연결됨 — 장면 읽기는 arma_eden_scene, 화면 확인은 arma_eden_look, ' +
-            '배치와 편집은 arma_eden_place, arma_eden_edit 를 쓰세요. arma_exec 는 mode=server 만 됩니다. ' +
+          'Eden 에디터에 연결됨 — 장면 읽기는 arma_eden_scene, 자산 패널에서 찾기는 arma_eden_find, ' +
+            '화면 확인은 arma_eden_look, 배치와 편집은 arma_eden_place, arma_eden_edit 를 쓰세요. ' +
+            'Zeus 툴은 에디터에서 쓰지 않습니다. arma_exec 는 mode=server 만 됩니다. ' +
             '바뀐 내용은 사용자가 저장하기 전까지 파일에 쓰이지 않습니다.',
         );
       }

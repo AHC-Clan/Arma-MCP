@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ExecManager } from '../src/exec/execManager.js';
 import { createSessionContext } from '../src/mcp/session.js';
-import { runEdenEdit, runEdenLook, runEdenPlace, runEdenScene } from '../src/mcp/tools/eden.js';
+import { runEdenEdit, runEdenFind, runEdenLook, runEdenPlace, runEdenScene } from '../src/mcp/tools/eden.js';
 import type { Gateway } from '../src/ipc/gateway.js';
 import type { Deps } from '../src/mcp/deps.js';
 
@@ -60,6 +60,7 @@ const isScene = (c: string): boolean => c.includes('_cand sort true');
 const isClass = (c: string): boolean => c.includes('createSimpleObject');
 const isPlace = (c: string): boolean => c.includes('create3DENEntity');
 const isEdit = (c: string): boolean => c.includes('delete3DENEntities');
+const isAssets = (c: string): boolean => c.includes('AHC_MCP_ea');
 const isPage = (c: string): boolean => c.startsWith('private _p = (missionNamespace getVariable ["AHC_MCP_pg"');
 
 /** 상자 2x4x2 m, 바닥 10 m 인 물체 행. */
@@ -128,15 +129,65 @@ test('place: ref 를 재고, 클래스를 확인하고, 옆에 놓을 자리를 
   assert.match(String(r.note), /실행 취소 한 단계/);
 });
 
-test('place: 없는 클래스는 만들지 않고 후보를 돌려준다', async () => {
+test('place: 없는 클래스는 만들지 않고 자산 색인에서 후보를 돌려준다', async () => {
+  let assetCode = '';
   const { gateway, deps } = makeDeps((code) => {
-    if (isClass(code)) return 'ARRAY: [1,1,[["B_MRAP_01",0,"","B_MRAP_01_F|B_MRAP_01_gmg_F"]],[]]';
+    if (isClass(code)) return 'ARRAY: [1,1,[["B_MRAP_01",0,""]],[]]';
+    if (isAssets(code)) {
+      assetCode = code;
+      return 'ARRAY: [2,1,[["vehicle","B_MRAP_01_F","Hunter","NATO > Cars","WEST",0,60],["vehicle","B_MRAP_01_gmg_F","Hunter GMG","NATO > Cars","WEST",0,60]],["Korean",9000]]';
+    }
     return null;
   });
   const r = await runEdenPlace(deps, { items: [{ class: 'B_MRAP_01', at: [1, 2] }] });
   assert.equal(r.ok, false);
   assert.deepEqual(r.unknown, [{ class: 'B_MRAP_01', candidates: ['B_MRAP_01_F', 'B_MRAP_01_gmg_F'] }]);
+  assert.ok(assetCode.includes('toLower "B_MRAP_01"'));
+  assert.ok(assetCode.includes('["unit","vehicle","object"]'), '물체 type 은 유닛, 차량, 물체에서 찾는다');
+  assert.match(String(r.hint), /arma_eden_find/);
   assert.ok(!gateway.sent.some((f) => isPlace(String(f.code))));
+});
+
+test('find: 자산 행을 place 에 넣을 모양으로 돌려준다', async () => {
+  const { deps } = makeDeps((code) =>
+    isAssets(code)
+      ? 'ARRAY: [3,1,[' +
+        '["object","Land_CampingTable_F","캠핑 테이블","Things > Furniture","EMPTY",0,40],' +
+        '["module","ModuleHideTerrainObjects_F","Hide Terrain Objects","Environment","",1,40],' +
+        '["group","West|BLU_F|Infantry|BUS_InfSquad","Rifle Squad","NATO > Infantry","WEST",0,25]' +
+        '],["Korean",9000]]'
+      : null,
+  );
+  const r = await runEdenFind(deps, { query: '테이블' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.language, 'Korean');
+  const rows = r.results as Record<string, unknown>[];
+  assert.deepEqual(rows[0], {
+    kind: 'object',
+    label: '캠핑 테이블',
+    class: 'Land_CampingTable_F',
+    path: 'Things > Furniture',
+    side: 'EMPTY',
+    place: { class: 'Land_CampingTable_F' },
+    score: 40,
+  });
+  assert.equal(rows[1]!.is3DEN, true);
+  assert.equal(rows[1]!.zeus, false);
+  assert.deepEqual(rows[1]!.place, { class: 'ModuleHideTerrainObjects_F', type: 'logic' });
+  assert.equal(rows[2]!.class, 'BUS_InfSquad');
+  assert.equal(rows[2]!.sqf, 'configFile >> "CfgGroups" >> "West" >> "BLU_F" >> "Infantry" >> "BUS_InfSquad"');
+  assert.equal(rows[2]!.place, undefined);
+  assert.match(String(r.note), /create3DENComposition/);
+});
+
+test('find: 에디터가 아니거나 인자가 틀리면 보내지 않는다', async () => {
+  const mission = makeDeps(() => null, false);
+  assert.equal((await runEdenFind(mission.deps, { query: 'x' })).ok, false);
+  assert.equal(mission.gateway.sent.length, 0);
+  const ed = makeDeps(() => null);
+  assert.match(String((await runEdenFind(ed.deps, { side: 'NOPE' as 'WEST' })).error), /side/);
+  assert.match(String((await runEdenFind(ed.deps, { kind: 'trigger' as 'unit' })).error), /kind/);
+  assert.equal(ed.gateway.sent.length, 0);
 });
 
 test('place: 없는 ref id 는 클래스 확인 전에 멈춘다', async () => {

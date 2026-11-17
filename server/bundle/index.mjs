@@ -44428,7 +44428,7 @@ function registerStatusTool(server, shared) {
       }
       if (connected && snap.editor === true) {
         hints.push(
-          "Eden \uC5D0\uB514\uD130\uC5D0 \uC5F0\uACB0\uB428 \u2014 \uC7A5\uBA74 \uC77D\uAE30\uB294 arma_eden_scene, \uD654\uBA74 \uD655\uC778\uC740 arma_eden_look, \uBC30\uCE58\uC640 \uD3B8\uC9D1\uC740 arma_eden_place, arma_eden_edit \uB97C \uC4F0\uC138\uC694. arma_exec \uB294 mode=server \uB9CC \uB429\uB2C8\uB2E4. \uBC14\uB010 \uB0B4\uC6A9\uC740 \uC0AC\uC6A9\uC790\uAC00 \uC800\uC7A5\uD558\uAE30 \uC804\uAE4C\uC9C0 \uD30C\uC77C\uC5D0 \uC4F0\uC774\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+          "Eden \uC5D0\uB514\uD130\uC5D0 \uC5F0\uACB0\uB428 \u2014 \uC7A5\uBA74 \uC77D\uAE30\uB294 arma_eden_scene, \uC790\uC0B0 \uD328\uB110\uC5D0\uC11C \uCC3E\uAE30\uB294 arma_eden_find, \uD654\uBA74 \uD655\uC778\uC740 arma_eden_look, \uBC30\uCE58\uC640 \uD3B8\uC9D1\uC740 arma_eden_place, arma_eden_edit \uB97C \uC4F0\uC138\uC694. Zeus \uD234\uC740 \uC5D0\uB514\uD130\uC5D0\uC11C \uC4F0\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. arma_exec \uB294 mode=server \uB9CC \uB429\uB2C8\uB2E4. \uBC14\uB010 \uB0B4\uC6A9\uC740 \uC0AC\uC6A9\uC790\uAC00 \uC800\uC7A5\uD558\uAE30 \uC804\uAE4C\uC9C0 \uD30C\uC77C\uC5D0 \uC4F0\uC774\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
         );
       }
       const dllVersion = deps.telemetry.dllVersion();
@@ -48387,6 +48387,14 @@ function joinNotes2(notes) {
 function machineLabel(m, reported) {
   return reported ?? (m.mode === "server" ? "server" : m.target ?? "?");
 }
+function editorRefusal(deps) {
+  if (deps.telemetry.current().editor !== true) return null;
+  return {
+    ok: false,
+    error: "\uC9C0\uAE08 \uC5F0\uACB0\uC740 Eden \uC5D0\uB514\uD130\uC785\uB2C8\uB2E4. Zeus \uD234\uC740 \uBBF8\uC158 \uC911 Zeus \uC5D0\uC11C \uC501\uB2C8\uB2E4.",
+    hint: "\uC5D0\uB514\uD130 \uC790\uC0B0 \uD328\uB110\uC5D0\uC11C \uCC3E\uAE30\uB294 arma_eden_find, \uBC30\uCE58\uB294 arma_eden_place \uB97C \uC4F0\uC138\uC694."
+  };
+}
 function waitOrAbort(ms, signal) {
   return new Promise((resolve) => {
     if (signal.aborted) return resolve(false);
@@ -48419,6 +48427,8 @@ async function runZeusFind(deps, args, signal) {
   }
   const limit = clamp4(Math.trunc(args.limit ?? DEFAULT_LIMIT), 1, MAX_LIMIT);
   if (!deps.gateway.isConnected()) return { ok: false, error: "game not connected" };
+  const inEditor = editorRefusal(deps);
+  if (inEditor) return { ...inEditor, source };
   const ctx = makeSessionExecContext(deps, void 0, signal);
   const picked = await pickZeusMachine(
     deps,
@@ -48490,6 +48500,8 @@ async function runZeusModule(deps, args, signal) {
   const target = (args.target ?? "").trim();
   const observeMs = clamp4(Math.trunc(args.observeMs ?? DEFAULT_OBSERVE_MS), 0, MAX_OBSERVE_MS);
   if (!deps.gateway.isConnected()) return { ok: false, error: "game not connected" };
+  const inEditor = editorRefusal(deps);
+  if (inEditor) return inEditor;
   const ctx = makeSessionExecContext(deps, void 0, signal);
   const picked = await pickZeusMachine(deps, args.on, "module", ctx);
   if (!picked.ok) return { ...picked };
@@ -48632,7 +48644,7 @@ function registerZeusTools(server, shared) {
     "arma_zeus_find",
     {
       title: "Zeus \uC774\uB984\uC73C\uB85C \uB300\uC0C1 \uCC3E\uAE30",
-      description: `\uC0AC\uC6A9\uC790\uAC00 \uB300\uC0C1\uC744 Zeus \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uC774\uB984(\uC720\uB2DB \uC885\uB958\uBA85, \uD50C\uB808\uC774\uC5B4 \uC774\uB984, \uADF8\uB8F9 \uCF5C\uC0AC\uC778, \uCC28\uB7C9, \uBAA8\uB4C8, \uB9C8\uCEE4, \uC5D0\uB514\uD130 \uBCC0\uC218\uBA85)\uC774\uB098 "Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83"\uC73C\uB85C \uB9D0\uD558\uBA74 arma_exec \uC804\uC5D0 \uC774 \uD234\uB85C \uCC3E\uB294\uB2E4. \uACB0\uACFC\uC758 sqf \uC2DD(\uC608: ("2:345" call BIS_fnc_objectFromNetId))\uC744 arma_exec \uCF54\uB4DC\uC5D0 \uADF8\uB300\uB85C \uB123\uC5B4 \uC4F4\uB2E4. source='mission' \uC740 \uB9F5\uC5D0 \uC788\uB294 \uAC83, 'selected' \uB294 \uC9C0\uAE08 Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83, 'palette' \uB294 Zeus \uC0DD\uC131 \uD328\uB110(\uC720\uB2DB \uC885\uB958, \uCC28\uB7C9, \uBAA8\uB4C8, \uADF8\uB8F9 \uD3B8\uC131)\uC774\uB2E4. \uC774\uB984\uC740 Zeus \uB97C \uC4F0\uB294 \uD50C\uB808\uC774\uC5B4 \uBA38\uC2E0\uC758 \uC5B8\uC5B4\uB85C \uACC4\uC0B0\uD55C\uB2E4. \uAC19\uC740 \uC774\uB984\uC774 \uC5EC\uB7FF\uC774\uBA74 score, dist, grid \uB85C \uACE0\uB974\uAC70\uB098 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBB3B\uB294\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.`,
+      description: `\uC0AC\uC6A9\uC790\uAC00 \uB300\uC0C1\uC744 Zeus \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uC774\uB984(\uC720\uB2DB \uC885\uB958\uBA85, \uD50C\uB808\uC774\uC5B4 \uC774\uB984, \uADF8\uB8F9 \uCF5C\uC0AC\uC778, \uCC28\uB7C9, \uBAA8\uB4C8, \uB9C8\uCEE4, \uC5D0\uB514\uD130 \uBCC0\uC218\uBA85)\uC774\uB098 "Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83"\uC73C\uB85C \uB9D0\uD558\uBA74 arma_exec \uC804\uC5D0 \uC774 \uD234\uB85C \uCC3E\uB294\uB2E4. \uACB0\uACFC\uC758 sqf \uC2DD(\uC608: ("2:345" call BIS_fnc_objectFromNetId))\uC744 arma_exec \uCF54\uB4DC\uC5D0 \uADF8\uB300\uB85C \uB123\uC5B4 \uC4F4\uB2E4. source='mission' \uC740 \uB9F5\uC5D0 \uC788\uB294 \uAC83, 'selected' \uB294 \uC9C0\uAE08 Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83, 'palette' \uB294 Zeus \uC0DD\uC131 \uD328\uB110(\uC720\uB2DB \uC885\uB958, \uCC28\uB7C9, \uBAA8\uB4C8, \uADF8\uB8F9 \uD3B8\uC131)\uC774\uB2E4. Eden \uC5D0\uB514\uD130\uC5D0\uC11C\uB294 \uC4F0\uC9C0 \uC54A\uACE0 arma_eden_find \uB97C \uC4F4\uB2E4. \uC774\uB984\uC740 Zeus \uB97C \uC4F0\uB294 \uD50C\uB808\uC774\uC5B4 \uBA38\uC2E0\uC758 \uC5B8\uC5B4\uB85C \uACC4\uC0B0\uD55C\uB2E4. \uAC19\uC740 \uC774\uB984\uC774 \uC5EC\uB7FF\uC774\uBA74 score, dist, grid \uB85C \uACE0\uB974\uAC70\uB098 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBB3B\uB294\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.`,
       inputSchema: {
         stack: STACK_INPUT,
         source: external_exports.enum(["mission", "selected", "palette"]).optional().describe("\uAE30\uBCF8 'mission'. 'selected' \uB294 Zeus \uBA38\uC2E0\uC758 curatorSelected, 'palette' \uB294 Zeus \uC0DD\uC131 \uBAA9\uB85D."),
@@ -48753,9 +48765,8 @@ function buildClassSqf(a) {
     "isNil {",
     CUT,
     GEOM_STR,
-    'private _sug = {params ["_q","_cfg"]; private _ql = toLower _q; private _cond = format ["getNumber (_x >> ""scope"") >= 2 && {((toLower configName _x) find %1 >= 0) || {(toLower getText (_x >> ""displayName"")) find %1 >= 0}}", str _ql]; ((_cond configClasses _cfg) select [0, 5]) apply {configName _x}};',
     "private _rows = [];",
-    `{_x params ["_c","_m"]; private _cfg = configFile >> (["CfgVehicles","CfgMarkers"] select (_m == "Marker"));if (!isClass (_cfg >> _c)) then {_rows pushBack [_c, 0, "", ([_c, _cfg] call _sug) joinString "|"]} else {if (_m != "Object") then {_rows pushBack [_c, 2, "", ""]} else {private _o = createSimpleObject [_c, [0, 0, 2000], true]; if (isNull _o) then {_rows pushBack [_c, 2, "", ""]} else {private _bb = boundingBoxReal _o; deleteVehicle _o; private _mn = _bb select 0; private _mx = _bb select 1; _rows pushBack [_c, 1, [[((_mx select 0) - (_mn select 0)) / 2, ((_mx select 1) - (_mn select 1)) / 2, ((_mx select 2) - (_mn select 2)) / 2]] call _gstr, ""]}}}} forEach ` + list + ";",
+    `{_x params ["_c","_m"]; private _cfg = configFile >> (["CfgVehicles","CfgMarkers"] select (_m == "Marker"));if (!isClass (_cfg >> _c)) then {_rows pushBack [_c, 0, ""]} else {if (_m != "Object") then {_rows pushBack [_c, 2, ""]} else {private _o = createSimpleObject [_c, [0, 0, 2000], true]; if (isNull _o) then {_rows pushBack [_c, 2, ""]} else {private _bb = boundingBoxReal _o; deleteVehicle _o; private _mn = _bb select 0; private _mx = _bb select 1; _rows pushBack [_c, 1, [[((_mx select 0) - (_mn select 0)) / 2, ((_mx select 1) - (_mn select 1)) / 2, ((_mx select 2) - (_mn select 2)) / 2]] call _gstr]}}}} forEach ` + list + ";",
     paginateRows([2]),
     storePages(a.key),
     "_out = [count _rows, count _pages, _pages select 0, []];",
@@ -48778,6 +48789,7 @@ function zArgs(z2) {
   }
 }
 var SETTLE = 'private _settle = {params ["_e","_k","_zk","_zv"]; if (_zk == "keep" || {!(_e isEqualType objNull)} || {_k in ["trigger","logic"]}) exitWith {}; private _p = [_e, "position", getPosATL _e] call _attr; if (_zk == "attr") exitWith {_e set3DENAttribute ["position", [_p select 0, _p select 1, _zv]]}; if (_zk == "ground" && {_k == "unit"}) exitWith {}; ([_e] call _meas) params ["_c","_h","_bz","_g0","_g1"]; private _dz = 0; if (_zk == "ground") then {_dz = 0 - _g0}; if (_zk == "asl") then {_dz = _zv - _bz}; if (_zk == "on") then {private _r = get3DENEntity _zv; if (!isNull _r) then {([_r] call _meas) params ["_rc","_rh"]; private _rt = (_rc select 2) + (_rh select 2); private _hs = lineIntersectsSurfaces [[_c select 0, _c select 1, _rt + 1], [_c select 0, _c select 1, (_rc select 2) - (_rh select 2) - 1], _e, objNull, true, 10, "GEOM", "NONE"]; private _i = _hs findIf {((_x select 2) isEqualTo _r) || {(_x select 3) isEqualTo _r}}; private _sz = if (_i >= 0) then {((_hs select _i) select 0) select 2} else {_rt}; _dz = _sz - _bz}}; if (abs _dz > 0.001) then {_e set3DENAttribute ["position", [_p select 0, _p select 1, (_p select 2) + _dz]]}};';
+var CENTER = 'private _center = {params ["_e","_k","_w"]; if (count _w < 2 || {!(_e isEqualType objNull)} || {_k in ["trigger","logic"]}) exitWith {}; private _p = [_e, "position", getPosATL _e] call _attr; ([_e] call _meas) params ["_c"]; private _dx = (_w select 0) - (_c select 0); private _dy = (_w select 1) - (_c select 1); if (abs _dx > 0.001 || {abs _dy > 0.001}) then {_e set3DENAttribute ["position", [(_p select 0) + _dx, (_p select 1) + _dy, _p select 2]]}};';
 var ROTATE = 'private _rot = {params ["_e","_k","_d"]; if (_k == "marker") then {_e set3DENAttribute ["rotation", _d]} else {private _r = [_e, "rotation", [0,0,0]] call _attr; if !(_r isEqualType []) then {_r = [0,0,0]}; _e set3DENAttribute ["rotation", [_r param [0, 0], _r param [1, 0], _d]]}};';
 function buildPlaceSqf(a) {
   const items = "[" + a.items.map(
@@ -48789,9 +48801,10 @@ function buildPlaceSqf(a) {
     "isNil {",
     PRELUDE,
     SETTLE,
+    CENTER,
     ROTATE,
     "private _new = []; private _bad = [];",
-    'collect3DENHistory {{_x params ["_m","_c","_xy","_d","_zk","_zv","_nm"]; private _e = create3DENEntity [_m, _c, [_xy select 0, _xy select 1, 0], true]; if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""}) then {_bad pushBack _forEachIndex} else {private _k = [_e] call _kindOf; [_e, _k, _d] call _rot; if (_nm != "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; _new pushBack [_e, _k, _zk, _zv]}} forEach ' + items + "; {_x call _settle} forEach _new;};",
+    'collect3DENHistory {{_x params ["_m","_c","_xy","_d","_zk","_zv","_nm"]; private _e = create3DENEntity [_m, _c, [_xy select 0, _xy select 1, 0], true]; if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""}) then {_bad pushBack _forEachIndex} else {private _k = [_e] call _kindOf; [_e, _k, _d] call _rot; if (_nm != "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; _new pushBack [_e, _k, _zk, _zv, _xy]}} forEach ' + items + '; {_x params ["_e","_k","_zk","_zv","_w"]; [_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle} forEach _new;};',
     a.select ? "set3DENSelected (_new apply {_x select 0});" : "",
     "private _T = _new apply {_x select 0};",
     `private _rows = _new apply {[_x select 0, _x select 1, ${RF.target}] call _row};`,
@@ -48814,9 +48827,10 @@ function buildEditSqf(a) {
     "isNil {",
     PRELUDE,
     SETTLE,
+    CENTER,
     ROTATE,
     "private _ed = []; private _del = []; private _miss = [];",
-    'collect3DENHistory {{_x params ["_id","_xy","_d","_zk","_zv","_nm","_rm"]; private _e = get3DENEntity _id; if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""} || {(get3DENEntityID _e) != _id}) then {_miss pushBack _id} else {if (_rm) then {_del pushBack _e} else {private _k = [_e] call _kindOf; if (count _xy > 1) then {private _p = [_e, "position", getPosATL _e] call _attr; _e set3DENAttribute ["position", [_xy select 0, _xy select 1, _p param [2, 0]]]}; if (_d >= 0) then {[_e, _k, _d] call _rot}; if (_nm isEqualType "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; _ed pushBack [_e, _k, _zk, _zv]}}} forEach ' + ops + "; {_x call _settle} forEach _ed; if (_del isNotEqualTo []) then {delete3DENEntities _del};};",
+    'collect3DENHistory {{_x params ["_id","_xy","_d","_zk","_zv","_nm","_rm"]; private _e = get3DENEntity _id; if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""} || {(get3DENEntityID _e) != _id}) then {_miss pushBack _id} else {if (_rm) then {_del pushBack _e} else {private _k = [_e] call _kindOf; if (count _xy > 1) then {private _p = [_e, "position", getPosATL _e] call _attr; _e set3DENAttribute ["position", [_xy select 0, _xy select 1, _p param [2, 0]]]}; if (_d >= 0) then {[_e, _k, _d] call _rot}; if (_nm isEqualType "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; _ed pushBack [_e, _k, _zk, _zv, _xy]}}} forEach ' + ops + '; {_x params ["_e","_k","_zk","_zv","_w"]; [_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle} forEach _ed; if (_del isNotEqualTo []) then {delete3DENEntities _del};};',
     "private _T = _ed apply {_x select 0};",
     `private _rows = _ed apply {[_x select 0, _x select 1, ${RF.target}] call _row};`,
     a.neighborRadius > 0 ? neighbors(a.neighborRadius) : "",
@@ -48828,6 +48842,28 @@ function buildEditSqf(a) {
 function buildUndoSqf(n) {
   const k = Math.max(1, Math.min(50, Math.trunc(n)));
   return `${GUARD} for "_i" from 1 to ${k} do {do3DENAction "Undo"}; ["OK", ${k}]`;
+}
+var ASSET_KINDS = ["unit", "vehicle", "object", "module", "group", "marker"];
+var AF = { is3DEN: 1, zeus: 2 };
+var ASSET_INDEX = `private _ea = uiNamespace getVariable ["AHC_MCP_ea", []]; if (_ea isEqualTo []) then {private _sn = ["EAST","WEST","GUER","CIV"]; private _dn = {params ["_cfg","_n"]; if (_n == "") exitWith {""}; getText (configFile >> _cfg >> _n >> "displayName")}; {private _c = _x; private _cl = configName _c; private _kd = if (_cl isKindOf "Logic") then {"module"} else {if (_cl isKindOf "CAManBase") then {"unit"} else {if (_cl isKindOf "AllVehicles") then {"vehicle"} else {"object"}}}; private _sub = ["CfgEditorSubcategories", getText (_c >> "editorSubcategory")] call _dn; private _pa = if (_kd == "module") then {["CfgFactionClasses", getText (_c >> "category")] call _dn} else {private _top = if (_kd == "object") then {["CfgEditorCategories", getText (_c >> "editorCategory")] call _dn} else {["CfgFactionClasses", getText (_c >> "faction")] call _dn}; if (_sub == "") then {_top} else {_top + " > " + _sub}}; private _sx = if (_kd in ["unit","vehicle"]) then {_sn param [getNumber (_c >> "side"), ""]} else {["", "EMPTY"] select (_kd == "object")}; _ea pushBack [_kd, _cl, getText (_c >> "displayName"), _pa, _sx, ${AF.is3DEN} * (parseNumber (getNumber (_c >> "is3DEN") > 0)) + ${AF.zeus} * (parseNumber (getNumber (_c >> "scopeCurator") == 2))]} forEach ("getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgVehicles")); {private _sdc = _x; {private _fc = _x; {private _ca = _x; {_ea pushBack ["group", format ["%1|%2|%3|%4", configName _sdc, configName _fc, configName _ca, configName _x], getText (_x >> "name"), getText (_fc >> "name") + " > " + getText (_ca >> "name"), _sn param [getNumber (_x >> "side"), ""], 0]} forEach ("true" configClasses _ca)} forEach ("true" configClasses _fc)} forEach ("true" configClasses _sdc)} forEach ("true" configClasses (configFile >> "CfgGroups")); {_ea pushBack ["marker", configName _x, getText (_x >> "name"), getText (configFile >> "CfgMarkerClasses" >> getText (_x >> "markerClass") >> "displayName"), "", 0]} forEach ("getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgMarkers")); uiNamespace setVariable ["AHC_MCP_ea", _ea]};`;
+function buildAssetsSqf(a) {
+  return [
+    GUARD,
+    queryPrelude(a.query),
+    `private _K = ${sqfStringArray(a.kinds)}; private _sd = ${sqfString(a.side)}; private _lim = ${Math.trunc(a.limit)};`,
+    CUT,
+    SCORE,
+    "private _out = [];",
+    "isNil {",
+    ASSET_INDEX,
+    'private _rows = []; {_x params ["_kd","_cl","_lb","_pa","_sx"]; if ((count _K == 0 || {_kd in _K}) && {_sd == "" || {_sx == _sd}}) then {private _s = [[_lb, _cl, _pa]] call _sc; if (_s > 0) then {_rows pushBack (_x + [_s])}}} forEach _ea;',
+    sortAndLimit(6, -1),
+    paginate([3], 2),
+    storePages(a.key),
+    "_out = [_total, count _pages, _pages select 0, [language, count _ea]];",
+    "};",
+    "_out"
+  ].join(" ");
 }
 function buildCameraSqf(pos, dir, up) {
   const v = (a) => "[" + a.map((n) => sqfNumber(n)).join(",") + "]";
@@ -48986,6 +49022,36 @@ function cameraFor(view, center, radius, facing = 180, fovDeg = 40, floorZ = -In
 
 // src/eden/edenRuntime.ts
 var KINDS = ["unit", "vehicle", "object", "logic", "trigger", "marker", "map"];
+var PLACE_TYPE = {
+  unit: "object",
+  vehicle: "object",
+  object: "object",
+  module: "logic",
+  marker: "marker"
+};
+function mapAssetRow(r) {
+  const [kind, cls, label, path44, side, flags, score] = r;
+  const k = typeof kind === "string" ? kind : "";
+  const c = typeof cls === "string" ? cls : "";
+  const f = typeof flags === "number" ? flags : 0;
+  const out2 = { kind: k, label: typeof label === "string" ? label : "" };
+  if (k === "group") {
+    out2.class = c.split("|").pop() ?? c;
+    out2.sqf = groupTemplateExpr(c);
+  } else {
+    out2.class = c;
+  }
+  if (typeof path44 === "string" && path44 !== "") out2.path = path44;
+  if (typeof side === "string" && side !== "") out2.side = side;
+  if (k === "module") {
+    out2.is3DEN = (f & AF.is3DEN) !== 0;
+    out2.zeus = (f & AF.zeus) !== 0;
+  }
+  const t = PLACE_TYPE[k];
+  if (t) out2.place = t === "object" ? { class: c } : { class: c, type: t };
+  if (typeof score === "number") out2.score = score;
+  return out2;
+}
 function mapRow(r) {
   const [id, kind, cls, name, layer, geom, flags] = r;
   if (typeof id !== "number" || typeof kind !== "string" || !KINDS.includes(kind) || typeof geom !== "string") {
@@ -49178,6 +49244,16 @@ var MAX_ITEMS = 20;
 var MAX_OPS = 30;
 var NEIGHBOR_EXTRA = 8;
 var EXEC_TIMEOUT_MS = 15e3;
+var FIND_DEFAULT_LIMIT = 20;
+var QUERY_MAX2 = 80;
+var CANDIDATES = 5;
+var ASSET_SIDES = ["WEST", "EAST", "GUER", "CIV", "EMPTY"];
+var CANDIDATE_KINDS = {
+  Object: ["unit", "vehicle", "object"],
+  Logic: ["module"],
+  Trigger: [],
+  Marker: ["marker"]
+};
 var DEFAULT_LOOK_DELAY_MS = 400;
 var LOOK_MAX_WIDTH = 1024;
 var CAMERA_FLOOR = 1.5;
@@ -49293,6 +49369,50 @@ async function runEdenScene(deps, args, signal) {
       matched > entities.length ? `${matched}\uAC1C \uC911 ${entities.length}\uAC1C\uB9CC \uB3CC\uB824\uC92C\uC2B5\uB2C8\uB2E4. query, kind, near \uB85C \uC881\uD788\uAC70\uB098 limit \uC744 \uB298\uB9AC\uC138\uC694.` : void 0,
       args.selected === true && matched === 0 ? "\uC5D0\uB514\uD130\uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83\uC774 \uC5C6\uC2B5\uB2C8\uB2E4." : void 0,
       overlaps.length > 0 ? "\uB3CC\uB824\uC900 \uC5D4\uD2F0\uD2F0\uB07C\uB9AC\uC758 \uC0C1\uC790 \uACB9\uCE68\uB9CC \uBD24\uC2B5\uB2C8\uB2E4. \uB9F5 \uAC74\uBB3C\uACFC\uC758 \uACB9\uCE68\uC740 arma_eden_place, edit \uACB0\uACFC\uC5D0 \uB098\uC635\uB2C8\uB2E4." : void 0
+    ]),
+    exec: { count: res.execs, durationMs: res.durationMs }
+  };
+}
+async function searchAssets(deps, a, ctx) {
+  const key = nextKey(deps.session.shortId, "ea");
+  const res = await runPaged(deps, SERVER, buildAssetsSqf({ ...a, key }), key, "eden-find", ctx, EXEC_TIMEOUT_MS);
+  if (!res.ok) return { ok: false, error: res.error ?? "no result" };
+  const [language, indexed] = res.meta;
+  return {
+    ok: true,
+    total: res.total,
+    rows: res.rows,
+    language: typeof language === "string" ? language : void 0,
+    indexed: typeof indexed === "number" ? indexed : void 0,
+    execs: res.execs,
+    durationMs: res.durationMs
+  };
+}
+async function runEdenFind(deps, args, signal) {
+  const problem = editorProblem(deps);
+  if (problem) return { ok: false, error: problem };
+  const query = (args.query ?? "").replace(/\s+/g, " ").trim().slice(0, QUERY_MAX2);
+  const kinds = args.kind === void 0 ? [] : Array.isArray(args.kind) ? args.kind : [args.kind];
+  const bad = kinds.find((k) => !ASSET_KINDS.includes(k));
+  if (bad) return { ok: false, error: `kind '${bad}' \uB294 \uC4F8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4(${ASSET_KINDS.join(", ")}).` };
+  const side = args.side ?? "";
+  if (side !== "" && !ASSET_SIDES.includes(side)) {
+    return { ok: false, error: `side \uB294 ${ASSET_SIDES.join(", ")} \uC911 \uD558\uB098\uC785\uB2C8\uB2E4.` };
+  }
+  const limit = clamp5(Math.trunc(args.limit ?? FIND_DEFAULT_LIMIT), 1, MAX_LIMIT2);
+  const ctx = makeSessionExecContext(deps, void 0, signal);
+  const res = await searchAssets(deps, { query, kinds, side, limit }, ctx);
+  if (!res.ok) return { ok: false, error: res.error };
+  const results = res.rows.map((r) => mapAssetRow(r));
+  return {
+    ok: true,
+    language: res.language,
+    total: res.total,
+    returned: results.length,
+    results,
+    note: joinNotes3([
+      res.total > results.length ? `${res.total}\uAC1C \uC911 ${results.length}\uAC1C\uB9CC \uB3CC\uB824\uC92C\uC2B5\uB2C8\uB2E4. query \uB97C \uC881\uD788\uAC70\uB098 limit \uC744 \uB298\uB9AC\uC138\uC694.` : void 0,
+      results.some((r) => r.kind === "group") ? "\uADF8\uB8F9 \uD3B8\uC131(group)\uC740 arma_eden_place \uB85C \uB193\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. sqf \uC758 config \uACBD\uB85C\uB97C create3DENComposition \uC5D0 \uC501\uB2C8\uB2E4." : void 0
     ]),
     exec: { count: res.execs, durationMs: res.durationMs }
   };
@@ -49423,23 +49543,31 @@ async function runEdenPlace(deps, args, signal) {
   const cls = await runPaged(deps, SERVER, buildClassSqf({ classes: pairs, key: ckey }), ckey, "eden-class", ctx, EXEC_TIMEOUT_MS);
   if (!cls.ok) return { ok: false, error: `\uD074\uB798\uC2A4\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${cls.error}` };
   const sizes = /* @__PURE__ */ new Map();
-  const unknown2 = [];
+  const missingCls = [];
   for (const r of cls.rows) {
-    const [c, state, half, sug] = r;
+    const [c, state, half] = r;
     if (typeof c !== "string") continue;
     if (state === 0) {
-      unknown2.push({ class: c, candidates: typeof sug === "string" && sug !== "" ? sug.split("|") : [] });
+      missingCls.push(c);
     } else {
       const h = typeof half === "string" && half !== "" ? half.split(",").map(Number) : null;
       sizes.set(c, h && h.length === 3 && h.every((n) => Number.isFinite(n)) ? h : null);
     }
   }
-  if (unknown2.length > 0) {
+  if (missingCls.length > 0) {
+    const unknown2 = [];
+    for (const c of missingCls) {
+      const mode = pairs.find(([pc]) => pc === c)?.[1] ?? "Object";
+      const kinds = CANDIDATE_KINDS[mode];
+      const found = kinds.length > 0 ? await searchAssets(deps, { query: c, kinds, side: "", limit: CANDIDATES }, ctx) : null;
+      const candidates = found && found.ok ? found.rows.map((r) => String(r[1] ?? "")).filter((s) => s !== "") : [];
+      unknown2.push({ class: c, candidates });
+    }
     return {
       ok: false,
-      error: `\uC5C6\uB294 \uD074\uB798\uC2A4\uC785\uB2C8\uB2E4: ${unknown2.map((u) => u.class).join(", ")}. \uC544\uBB34\uAC83\uB3C4 \uB9CC\uB4E4\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`,
+      error: `\uC5C6\uB294 \uD074\uB798\uC2A4\uC785\uB2C8\uB2E4: ${missingCls.join(", ")}. \uC544\uBB34\uAC83\uB3C4 \uB9CC\uB4E4\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`,
       unknown: unknown2,
-      hint: 'candidates \uC5D0\uC11C \uACE0\uB974\uAC70\uB098, \uC0AC\uC6A9\uC790\uAC00 \uB9D0\uD55C \uC774\uB984\uC774\uBA74 arma_zeus_find { source:"palette" } \uCC98\uB7FC \uD45C\uC2DC \uC774\uB984\uC73C\uB85C \uCC3E\uC544 \uBCF4\uC138\uC694.'
+      hint: "candidates \uC5D0\uC11C \uACE0\uB974\uAC70\uB098, \uC0AC\uC6A9\uC790\uAC00 \uB9D0\uD55C \uC774\uB984\uC774\uBA74 arma_eden_find { query } \uB85C \uC5D0\uB514\uD130 \uC790\uC0B0 \uD328\uB110\uC758 \uD45C\uC2DC \uC774\uB984\uC73C\uB85C \uCC3E\uC544 \uBCF4\uC138\uC694."
     };
   }
   const notes = [];
@@ -49617,6 +49745,28 @@ function registerEdenTools(server, shared, io = {}) {
     )
   );
   server.registerTool(
+    "arma_eden_find",
+    {
+      title: "Eden \uC790\uC0B0 \uD328\uB110\uC5D0\uC11C \uCC3E\uAE30",
+      description: "\uC5D0\uB514\uD130 \uC624\uB978\uCABD \uC790\uC0B0 \uD328\uB110(\uC720\uB2DB, \uCC28\uB7C9, \uBE48 \uBB3C\uCCB4, \uBAA8\uB4C8, \uADF8\uB8F9 \uD3B8\uC131, \uB9C8\uCEE4)\uC5D0\uC11C \uD45C\uC2DC \uC774\uB984\uC774\uB098 \uD074\uB798\uC2A4 \uC870\uAC01\uC73C\uB85C \uCC3E\uB294\uB2E4. \uC0AC\uC6A9\uC790\uAC00 \uBB3C\uCCB4\uB97C \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uC774\uB984\uC73C\uB85C \uB9D0\uD558\uBA74 arma_eden_place \uC804\uC5D0 \uBD80\uB978\uB2E4. \uACB0\uACFC place \uB294 arma_eden_place \uC758 \uD56D\uBAA9\uC5D0 \uADF8\uB300\uB85C \uB123\uB294 class \uC640 type \uC774\uB2E4. \uBAA8\uB4C8\uC758 is3DEN \uC740 \uC5D0\uB514\uD130 \uC18D\uC131 \uCC3D\uC744 \uC4F0\uB294 \uBAA8\uB4C8, zeus \uB294 Zeus \uBAA9\uB85D\uC5D0\uB3C4 \uC788\uB294 \uAC83\uC774\uB2E4. \uC774 \uBAA9\uB85D\uC740 \uC5D0\uB514\uD130 \uAE30\uC900(scope 2)\uC774\uB77C Zeus \uBAA9\uB85D(arma_zeus_find palette)\uACFC \uB2E4\uB974\uB2E4. \uD45C\uC2DC \uC774\uB984\uC740 \uAC8C\uC784 \uC5B8\uC5B4\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.",
+      inputSchema: {
+        stack: STACK_INPUT,
+        query: external_exports.string().max(QUERY_MAX2).optional().describe("\uD45C\uC2DC \uC774\uB984, \uD074\uB798\uC2A4, \uACBD\uB85C \uC870\uAC01(\uB300\uC18C\uBB38\uC790 \uBB34\uC2DC). \uB0B1\uB9D0\uC774 \uBAA8\uB450 \uB4E4\uC5B4 \uC788\uC5B4\uB3C4 \uB9DE\uB294\uB2E4."),
+        kind: external_exports.union([external_exports.enum(["unit", "vehicle", "object", "module", "group", "marker"]), external_exports.array(external_exports.enum(["unit", "vehicle", "object", "module", "group", "marker"]))]).optional().describe("\uC885\uB958 \uD558\uB098\uB098 \uBC30\uC5F4."),
+        side: external_exports.enum(ASSET_SIDES).optional().describe("\uC9C4\uC601. \uBE48 \uBB3C\uCCB4\uB294 EMPTY."),
+        limit: external_exports.number().int().min(1).max(MAX_LIMIT2).optional().describe(`\uCD5C\uB300 \uC218. \uAE30\uBCF8 ${FIND_DEFAULT_LIMIT}.`)
+      }
+    },
+    onStack(
+      shared,
+      {},
+      async (deps, args, extra) => withAbortSignals(
+        [deps.session.abortController.signal, extra?.signal],
+        async (signal) => jsonContent(await runEdenFind(deps, args, signal))
+      )
+    )
+  );
+  server.registerTool(
     "arma_eden_look",
     {
       title: "Eden \uC5D0\uB514\uD130 \uD654\uBA74 \uBCF4\uAE30",
@@ -49645,14 +49795,14 @@ function registerEdenTools(server, shared, io = {}) {
     "arma_eden_place",
     {
       title: "Eden \uC5D0\uB514\uD130\uC5D0 \uB193\uAE30",
-      description: "\uC5D0\uB514\uD130\uC5D0 \uC5D4\uD2F0\uD2F0\uB97C \uB9CC\uB4E0\uB2E4. \uC0AC\uC6A9\uC790\uAC00 \uBC30\uCE58\uB97C \uC694\uCCAD\uD588\uC744 \uB54C\uB9CC \uC4F4\uB2E4. \uD56D\uBAA9\uB9C8\uB2E4 at([x, y] \uC9C0\uBA74, [x, y, z] \uBC14\uB2E5 ASL), on(\uADF8 \uC5D4\uD2F0\uD2F0 \uC704), beside(\uADF8 \uC5D4\uD2F0\uD2F0 \uC606\uC5D0 \uB9DE\uB2FF\uAC8C) \uC911 \uD558\uB098\uC640, dir, face, alignWith \uC911 \uD558\uB098\uB97C \uC900\uB2E4. \uC88C\uD45C\uB97C \uB208\uB300\uC911\uC73C\uB85C \uCC0D\uAE30\uBCF4\uB2E4 on, beside, face \uB85C \uAD00\uACC4\uB97C \uC8FC\uBA74 \uD06C\uAE30\uB97C \uC7AC\uC11C \uACB9\uCE58\uC9C0 \uC54A\uAC8C \uD47C\uB2E4. \uACB0\uACFC created \uB294 \uB9CC\uB4E0 \uB4A4 \uB2E4\uC2DC \uC7B0 \uC904(arma_eden_scene \uACFC \uAC19\uC740 \uBAA8\uC591)\uC774\uACE0 overlaps \uB294 \uB9F5 \uAC74\uBB3C, \uB098\uBB34, \uB2E4\uB978 \uC5D4\uD2F0\uD2F0\uC640\uC758 \uC0C1\uC790 \uACB9\uCE68\uC774\uB2E4. \uD310\uC815\uC774 \uB098\uC058\uBA74 arma_eden_edit \uB85C \uACE0\uCE5C\uB2E4. \uD074\uB798\uC2A4\uAC00 \uD2C0\uB9AC\uBA74 \uC544\uBB34\uAC83\uB3C4 \uB9CC\uB4E4\uC9C0 \uC54A\uACE0 \uD6C4\uBCF4\uB97C \uB3CC\uB824\uC900\uB2E4. \uD638\uCD9C \uD55C \uBC88\uC774 \uC2E4\uD589 \uCDE8\uC18C \uD55C \uB2E8\uACC4\uC774\uACE0, \uC800\uC7A5\uC740 \uC0AC\uC6A9\uC790\uAC00 \uD55C\uB2E4. " + AXES_NOTE,
+      description: "\uC5D0\uB514\uD130\uC5D0 \uC5D4\uD2F0\uD2F0\uB97C \uB9CC\uB4E0\uB2E4. \uC0AC\uC6A9\uC790\uAC00 \uBC30\uCE58\uB97C \uC694\uCCAD\uD588\uC744 \uB54C\uB9CC \uC4F4\uB2E4. \uD56D\uBAA9\uB9C8\uB2E4 at(\uC0C1\uC790 \uC911\uC2EC [x, y] \uB97C \uC9C0\uBA74\uC5D0, [x, y, z] \uB294 \uBC14\uB2E5 ASL), on(\uADF8 \uC5D4\uD2F0\uD2F0 \uC704), beside(\uADF8 \uC5D4\uD2F0\uD2F0 \uC606\uC5D0 \uB9DE\uB2FF\uAC8C) \uC911 \uD558\uB098\uC640, dir, face, alignWith \uC911 \uD558\uB098\uB97C \uC900\uB2E4. \uC88C\uD45C\uB97C \uB208\uB300\uC911\uC73C\uB85C \uCC0D\uAE30\uBCF4\uB2E4 on, beside, face \uB85C \uAD00\uACC4\uB97C \uC8FC\uBA74 \uD06C\uAE30\uB97C \uC7AC\uC11C \uACB9\uCE58\uC9C0 \uC54A\uAC8C \uD47C\uB2E4. \uACB0\uACFC created \uB294 \uB9CC\uB4E0 \uB4A4 \uB2E4\uC2DC \uC7B0 \uC904(arma_eden_scene \uACFC \uAC19\uC740 \uBAA8\uC591)\uC774\uACE0 overlaps \uB294 \uB9F5 \uAC74\uBB3C, \uB098\uBB34, \uB2E4\uB978 \uC5D4\uD2F0\uD2F0\uC640\uC758 \uC0C1\uC790 \uACB9\uCE68\uC774\uB2E4. \uD310\uC815\uC774 \uB098\uC058\uBA74 arma_eden_edit \uB85C \uACE0\uCE5C\uB2E4. \uD074\uB798\uC2A4\uAC00 \uD2C0\uB9AC\uBA74 \uC544\uBB34\uAC83\uB3C4 \uB9CC\uB4E4\uC9C0 \uC54A\uACE0 \uD6C4\uBCF4\uB97C \uB3CC\uB824\uC900\uB2E4. \uD638\uCD9C \uD55C \uBC88\uC774 \uC2E4\uD589 \uCDE8\uC18C \uD55C \uB2E8\uACC4\uC774\uACE0, \uC800\uC7A5\uC740 \uC0AC\uC6A9\uC790\uAC00 \uD55C\uB2E4. " + AXES_NOTE,
       inputSchema: {
         stack: STACK_INPUT,
         items: external_exports.array(
           external_exports.object({
             class: external_exports.string().min(1).describe("CfgVehicles \uD074\uB798\uC2A4(\uB9C8\uCEE4\uB294 CfgMarkers). \uC608: Land_CncBarrier_F, B_MRAP_01_F."),
             type: external_exports.enum(["object", "logic", "trigger", "marker"]).optional().describe("\uAE30\uBCF8 'object'(\uBB3C\uCCB4, \uCC28\uB7C9, \uC720\uB2DB). logic \uC740 \uBAA8\uB4C8, trigger \uB294 EmptyDetector, marker \uB294 \uB9C8\uCEE4."),
-            at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("[x, y] \uC9C0\uBA74 \uB610\uB294 [x, y, z] \uBC14\uB2E5 ASL."),
+            at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC0C1\uC790 \uC911\uC2EC [x, y] \uB97C \uC9C0\uBA74\uC5D0, \uB610\uB294 [x, y, z] \uBC14\uB2E5 ASL. scene \uC758 at \uACFC \uAC19\uC740 \uAE30\uC900\uC774\uB2E4."),
             ...PLACEMENT_FIELDS,
             name: external_exports.string().optional().describe("\uBCC0\uC218 \uC774\uB984.")
           })
@@ -49680,7 +49830,7 @@ function registerEdenTools(server, shared, io = {}) {
         ops: external_exports.array(
           external_exports.object({
             id: ID,
-            at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC0C8 \uC704\uCE58 [x, y] \uC9C0\uBA74 \uB610\uB294 [x, y, z] \uBC14\uB2E5 ASL."),
+            at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC0C8 \uC0C1\uC790 \uC911\uC2EC [x, y] \uB97C \uC9C0\uBA74\uC5D0, \uB610\uB294 [x, y, z] \uBC14\uB2E5 ASL."),
             by: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC9C0\uAE08 \uC790\uB9AC\uC5D0\uC11C [dx, dy(, dz)] m \uB9CC\uD07C(\uC6D4\uB4DC \uCD95)."),
             ...PLACEMENT_FIELDS,
             turn: external_exports.number().optional().describe("\uC9C0\uAE08 \uBC29\uD5A5\uC5D0 \uB354\uD560 \uAC01(\uB3C4). \uC591\uC218\uB294 \uC2DC\uACC4 \uBC29\uD5A5."),
@@ -49731,6 +49881,7 @@ var ALL_TOOL_NAMES = [
   "arma_zeus_find",
   "arma_zeus_module",
   "arma_eden_scene",
+  "arma_eden_find",
   "arma_eden_look",
   "arma_eden_place",
   "arma_eden_edit"

@@ -1,6 +1,6 @@
-// eden.ts: arma_eden_scene, arma_eden_look, arma_eden_place, arma_eden_edit 툴 등록.
+// eden.ts: arma_eden_scene, arma_eden_find, arma_eden_look, arma_eden_place, arma_eden_edit 툴 등록.
 //
-// Eden 에디터에 붙은 브리지(애드온 fn_initEditor)로 엔티티를 읽고, 보고, 놓고, 고친다.
+// Eden 에디터에 붙은 브리지(애드온 fn_initEditor)로 엔티티를 읽고, 자산 패널에서 찾고, 보고, 놓고, 고친다.
 // Zeus 툴처럼 새 와이어 타입 없이 조립 SQF 를 exec 로 보낸다(src/eden/edenSqf.ts).
 //
 // 블렌더 MCP 들과 배치 연구(Holodeck, LayoutVLM, VULCAN)에서 가져온 원칙을 따른다.
@@ -20,6 +20,8 @@ import type { ExecRequestContext } from '../../exec/execManager.js';
 import { execValue, nextKey, runPaged } from '../../zeus/zeusRuntime.js';
 import type { SqfValue } from '../../zeus/sqfValue.js';
 import {
+  ASSET_KINDS,
+  buildAssetsSqf,
   buildCameraRestoreSqf,
   buildCameraSqf,
   buildClassSqf,
@@ -30,6 +32,7 @@ import {
   buildTerrainSqf,
   buildUndoSqf,
   SCENE_KINDS,
+  type AssetKind,
   type EditOp,
   type EdenMode,
   type PlaceItem,
@@ -45,6 +48,7 @@ import {
 import {
   entityOut,
   judge,
+  mapAssetRow,
   mapRow,
   MODE_OF,
   overlapsOut,
@@ -65,6 +69,18 @@ const MAX_OPS = 30;
 /** 판정 이웃을 찾는 반경 여유(m). 대상 상자 반지름에 더한다. */
 const NEIGHBOR_EXTRA = 8;
 const EXEC_TIMEOUT_MS = 15000;
+const FIND_DEFAULT_LIMIT = 20;
+const QUERY_MAX = 80;
+/** 없는 클래스마다 돌려줄 후보 수. */
+const CANDIDATES = 5;
+const ASSET_SIDES = ['WEST', 'EAST', 'GUER', 'CIV', 'EMPTY'] as const;
+/** place 의 type 별로 후보를 찾을 자산 종류. */
+const CANDIDATE_KINDS: Record<EdenMode, AssetKind[]> = {
+  Object: ['unit', 'vehicle', 'object'],
+  Logic: ['module'],
+  Trigger: [],
+  Marker: ['marker'],
+};
 const DEFAULT_LOOK_DELAY_MS = 400;
 const LOOK_MAX_WIDTH = 1024;
 /** 카메라가 지형 아래로 내려가지 않게 두는 여유(m). */
@@ -212,6 +228,71 @@ export async function runEdenScene(deps: Deps, args: EdenSceneArgs, signal?: Abo
         : undefined,
       args.selected === true && matched === 0 ? '에디터에서 선택한 것이 없습니다.' : undefined,
       overlaps.length > 0 ? '돌려준 엔티티끼리의 상자 겹침만 봤습니다. 맵 건물과의 겹침은 arma_eden_place, edit 결과에 나옵니다.' : undefined,
+    ]),
+    exec: { count: res.execs, durationMs: res.durationMs },
+  };
+}
+
+// ---------------------------------------------------------------- arma_eden_find
+
+export interface EdenFindArgs {
+  query?: string;
+  kind?: AssetKind | AssetKind[];
+  side?: (typeof ASSET_SIDES)[number];
+  limit?: number;
+}
+
+/** 에디터 자산 패널 색인에서 찾는다. arma_eden_find 와 place 의 후보 찾기가 같이 쓴다. */
+async function searchAssets(
+  deps: Deps,
+  a: { query: string; kinds: AssetKind[]; side: string; limit: number },
+  ctx: ExecRequestContext,
+): Promise<
+  | { ok: true; total: number; rows: SqfValue[][]; language?: string; indexed?: number; execs: number; durationMs: number }
+  | { ok: false; error: string }
+> {
+  const key = nextKey(deps.session.shortId, 'ea');
+  const res = await runPaged(deps, SERVER, buildAssetsSqf({ ...a, key }), key, 'eden-find', ctx, EXEC_TIMEOUT_MS);
+  if (!res.ok) return { ok: false, error: res.error ?? 'no result' };
+  const [language, indexed] = res.meta;
+  return {
+    ok: true,
+    total: res.total,
+    rows: res.rows,
+    language: typeof language === 'string' ? language : undefined,
+    indexed: typeof indexed === 'number' ? indexed : undefined,
+    execs: res.execs,
+    durationMs: res.durationMs,
+  };
+}
+
+export async function runEdenFind(deps: Deps, args: EdenFindArgs, signal?: AbortSignal): Promise<Record<string, unknown>> {
+  const problem = editorProblem(deps);
+  if (problem) return { ok: false, error: problem };
+  const query = (args.query ?? '').replace(/\s+/g, ' ').trim().slice(0, QUERY_MAX);
+  const kinds = args.kind === undefined ? [] : Array.isArray(args.kind) ? args.kind : [args.kind];
+  const bad = kinds.find((k) => !ASSET_KINDS.includes(k));
+  if (bad) return { ok: false, error: `kind '${bad}' 는 쓸 수 없습니다(${ASSET_KINDS.join(', ')}).` };
+  const side = args.side ?? '';
+  if (side !== '' && !(ASSET_SIDES as readonly string[]).includes(side)) {
+    return { ok: false, error: `side 는 ${ASSET_SIDES.join(', ')} 중 하나입니다.` };
+  }
+  const limit = clamp(Math.trunc(args.limit ?? FIND_DEFAULT_LIMIT), 1, MAX_LIMIT);
+  const ctx = makeSessionExecContext(deps, undefined, signal);
+  const res = await searchAssets(deps, { query, kinds, side, limit }, ctx);
+  if (!res.ok) return { ok: false, error: res.error };
+  const results = res.rows.map((r) => mapAssetRow(r));
+  return {
+    ok: true,
+    language: res.language,
+    total: res.total,
+    returned: results.length,
+    results,
+    note: joinNotes([
+      res.total > results.length ? `${res.total}개 중 ${results.length}개만 돌려줬습니다. query 를 좁히거나 limit 을 늘리세요.` : undefined,
+      results.some((r) => r.kind === 'group')
+        ? '그룹 편성(group)은 arma_eden_place 로 놓지 않습니다. sqf 의 config 경로를 create3DENComposition 에 씁니다.'
+        : undefined,
     ]),
     exec: { count: res.execs, durationMs: res.durationMs },
   };
@@ -382,23 +463,32 @@ export async function runEdenPlace(deps: Deps, args: EdenPlaceArgs, signal?: Abo
   const cls = await runPaged(deps, SERVER, buildClassSqf({ classes: pairs, key: ckey }), ckey, 'eden-class', ctx, EXEC_TIMEOUT_MS);
   if (!cls.ok) return { ok: false, error: `클래스를 확인하지 못했습니다: ${cls.error}` };
   const sizes = new Map<string, number[] | null>();
-  const unknown: { class: string; candidates: string[] }[] = [];
+  const missingCls: string[] = [];
   for (const r of cls.rows) {
-    const [c, state, half, sug] = r;
+    const [c, state, half] = r;
     if (typeof c !== 'string') continue;
     if (state === 0) {
-      unknown.push({ class: c, candidates: typeof sug === 'string' && sug !== '' ? sug.split('|') : [] });
+      missingCls.push(c);
     } else {
       const h = typeof half === 'string' && half !== '' ? half.split(',').map(Number) : null;
       sizes.set(c, h && h.length === 3 && h.every((n) => Number.isFinite(n)) ? h : null);
     }
   }
-  if (unknown.length > 0) {
+  if (missingCls.length > 0) {
+    // 후보는 arma_eden_find 와 같은 자산 색인에서 찾는다. 찾지 못해도 만들지 않는 것은 같다.
+    const unknown: { class: string; candidates: string[] }[] = [];
+    for (const c of missingCls) {
+      const mode = pairs.find(([pc]) => pc === c)?.[1] ?? 'Object';
+      const kinds = CANDIDATE_KINDS[mode];
+      const found = kinds.length > 0 ? await searchAssets(deps, { query: c, kinds, side: '', limit: CANDIDATES }, ctx) : null;
+      const candidates = found && found.ok ? found.rows.map((r) => String(r[1] ?? '')).filter((s) => s !== '') : [];
+      unknown.push({ class: c, candidates });
+    }
     return {
       ok: false,
-      error: `없는 클래스입니다: ${unknown.map((u) => u.class).join(', ')}. 아무것도 만들지 않았습니다.`,
+      error: `없는 클래스입니다: ${missingCls.join(', ')}. 아무것도 만들지 않았습니다.`,
       unknown,
-      hint: 'candidates 에서 고르거나, 사용자가 말한 이름이면 arma_zeus_find { source:"palette" } 처럼 표시 이름으로 찾아 보세요.',
+      hint: 'candidates 에서 고르거나, 사용자가 말한 이름이면 arma_eden_find { query } 로 에디터 자산 패널의 표시 이름으로 찾아 보세요.',
     };
   }
 
@@ -627,6 +717,34 @@ export function registerEdenTools(server: ToolHost, shared: Deps, io: CaptureIo 
   );
 
   server.registerTool(
+    'arma_eden_find',
+    {
+      title: 'Eden 자산 패널에서 찾기',
+      description:
+        '에디터 오른쪽 자산 패널(유닛, 차량, 빈 물체, 모듈, 그룹 편성, 마커)에서 표시 이름이나 클래스 조각으로 찾는다. ' +
+        '사용자가 물체를 화면에 보이는 이름으로 말하면 arma_eden_place 전에 부른다. ' +
+        '결과 place 는 arma_eden_place 의 항목에 그대로 넣는 class 와 type 이다. 모듈의 is3DEN 은 에디터 속성 창을 쓰는 모듈, ' +
+        'zeus 는 Zeus 목록에도 있는 것이다. 이 목록은 에디터 기준(scope 2)이라 Zeus 목록(arma_zeus_find palette)과 다르다. ' +
+        '표시 이름은 게임 언어다. 게임을 바꾸지 않는다.',
+      inputSchema: {
+        stack: STACK_INPUT,
+        query: z.string().max(QUERY_MAX).optional().describe('표시 이름, 클래스, 경로 조각(대소문자 무시). 낱말이 모두 들어 있어도 맞는다.'),
+        kind: z
+          .union([z.enum(['unit', 'vehicle', 'object', 'module', 'group', 'marker']), z.array(z.enum(['unit', 'vehicle', 'object', 'module', 'group', 'marker']))])
+          .optional()
+          .describe('종류 하나나 배열.'),
+        side: z.enum(ASSET_SIDES).optional().describe('진영. 빈 물체는 EMPTY.'),
+        limit: z.number().int().min(1).max(MAX_LIMIT).optional().describe(`최대 수. 기본 ${FIND_DEFAULT_LIMIT}.`),
+      },
+    },
+    onStack(shared, {}, async (deps, args, extra) =>
+      withAbortSignals([deps.session.abortController.signal, extra?.signal], async (signal) =>
+        jsonContent(await runEdenFind(deps, args as EdenFindArgs, signal)),
+      ),
+    ),
+  );
+
+  server.registerTool(
     'arma_eden_look',
     {
       title: 'Eden 에디터 화면 보기',
@@ -659,7 +777,7 @@ export function registerEdenTools(server: ToolHost, shared: Deps, io: CaptureIo 
     {
       title: 'Eden 에디터에 놓기',
       description:
-        '에디터에 엔티티를 만든다. 사용자가 배치를 요청했을 때만 쓴다. 항목마다 at([x, y] 지면, [x, y, z] 바닥 ASL), ' +
+        '에디터에 엔티티를 만든다. 사용자가 배치를 요청했을 때만 쓴다. 항목마다 at(상자 중심 [x, y] 를 지면에, [x, y, z] 는 바닥 ASL), ' +
         'on(그 엔티티 위), beside(그 엔티티 옆에 맞닿게) 중 하나와, dir, face, alignWith 중 하나를 준다. ' +
         '좌표를 눈대중으로 찍기보다 on, beside, face 로 관계를 주면 크기를 재서 겹치지 않게 푼다. ' +
         '결과 created 는 만든 뒤 다시 잰 줄(arma_eden_scene 과 같은 모양)이고 overlaps 는 맵 건물, 나무, 다른 엔티티와의 상자 겹침이다. ' +
@@ -676,7 +794,7 @@ export function registerEdenTools(server: ToolHost, shared: Deps, io: CaptureIo 
                 .enum(['object', 'logic', 'trigger', 'marker'])
                 .optional()
                 .describe("기본 'object'(물체, 차량, 유닛). logic 은 모듈, trigger 는 EmptyDetector, marker 는 마커."),
-              at: z.array(z.number()).min(2).max(3).optional().describe('[x, y] 지면 또는 [x, y, z] 바닥 ASL.'),
+              at: z.array(z.number()).min(2).max(3).optional().describe('상자 중심 [x, y] 를 지면에, 또는 [x, y, z] 바닥 ASL. scene 의 at 과 같은 기준이다.'),
               ...PLACEMENT_FIELDS,
               name: z.string().optional().describe('변수 이름.'),
             }),
@@ -709,7 +827,7 @@ export function registerEdenTools(server: ToolHost, shared: Deps, io: CaptureIo 
           .array(
             z.object({
               id: ID,
-              at: z.array(z.number()).min(2).max(3).optional().describe('새 위치 [x, y] 지면 또는 [x, y, z] 바닥 ASL.'),
+              at: z.array(z.number()).min(2).max(3).optional().describe('새 상자 중심 [x, y] 를 지면에, 또는 [x, y, z] 바닥 ASL.'),
               by: z.array(z.number()).min(2).max(3).optional().describe('지금 자리에서 [dx, dy(, dz)] m 만큼(월드 축).'),
               ...PLACEMENT_FIELDS,
               turn: z.number().optional().describe('지금 방향에 더할 각(도). 양수는 시계 방향.'),

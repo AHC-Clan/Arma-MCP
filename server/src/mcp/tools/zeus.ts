@@ -58,6 +58,19 @@ function machineLabel(m: ZeusMachine, reported: string | undefined): string {
   return reported ?? (m.mode === 'server' ? 'server' : (m.target ?? '?'));
 }
 
+/**
+ * 연결이 Eden 에디터면 Zeus 툴을 쓰지 않는다. 에디터에는 Zeus 사용자가 없어 서버에서 Zeus 기준 목록(scopeCurator)을 읽게 되는데,
+ * 그 목록은 에디터 자산 패널과 다르다(에디터 전용 모듈이 빠지고 Zeus 전용 모듈이 섞인다). 상태는 arma_status 의 mission.editor(is3DEN)다.
+ */
+function editorRefusal(deps: Deps): Record<string, unknown> | null {
+  if (deps.telemetry.current().editor !== true) return null;
+  return {
+    ok: false,
+    error: '지금 연결은 Eden 에디터입니다. Zeus 툴은 미션 중 Zeus 에서 씁니다.',
+    hint: '에디터 자산 패널에서 찾기는 arma_eden_find, 배치는 arma_eden_place 를 쓰세요.',
+  };
+}
+
 /** 신호가 끊기면 즉시 깨어나는 대기. */
 function waitOrAbort(ms: number, signal: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
@@ -109,6 +122,8 @@ export async function runZeusFind(
   }
   const limit = clamp(Math.trunc(args.limit ?? DEFAULT_LIMIT), 1, MAX_LIMIT);
   if (!deps.gateway.isConnected()) return { ok: false, error: 'game not connected' };
+  const inEditor = editorRefusal(deps);
+  if (inEditor) return { ...inEditor, source };
 
   const ctx = makeSessionExecContext(deps, undefined, signal);
   const picked = await pickZeusMachine(
@@ -211,6 +226,8 @@ export async function runZeusModule(
   const target = (args.target ?? '').trim();
   const observeMs = clamp(Math.trunc(args.observeMs ?? DEFAULT_OBSERVE_MS), 0, MAX_OBSERVE_MS);
   if (!deps.gateway.isConnected()) return { ok: false, error: 'game not connected' };
+  const inEditor = editorRefusal(deps);
+  if (inEditor) return inEditor;
 
   const ctx = makeSessionExecContext(deps, undefined, signal);
   const picked = await pickZeusMachine(deps, args.on, 'module', ctx);
@@ -381,7 +398,7 @@ export function registerZeusTools(server: ToolHost, shared: Deps): void {
         '에디터 변수명)이나 "Zeus 에서 선택한 것"으로 말하면 arma_exec 전에 이 툴로 찾는다. ' +
         "결과의 sqf 식(예: (\"2:345\" call BIS_fnc_objectFromNetId))을 arma_exec 코드에 그대로 넣어 쓴다. " +
         "source='mission' 은 맵에 있는 것, 'selected' 는 지금 Zeus 에서 선택한 것, " +
-        "'palette' 는 Zeus 생성 패널(유닛 종류, 차량, 모듈, 그룹 편성)이다. " +
+        "'palette' 는 Zeus 생성 패널(유닛 종류, 차량, 모듈, 그룹 편성)이다. Eden 에디터에서는 쓰지 않고 arma_eden_find 를 쓴다. " +
         '이름은 Zeus 를 쓰는 플레이어 머신의 언어로 계산한다. 같은 이름이 여럿이면 score, dist, grid 로 고르거나 ' +
         '사용자에게 묻는다. 게임을 바꾸지 않는다.',
       inputSchema: {

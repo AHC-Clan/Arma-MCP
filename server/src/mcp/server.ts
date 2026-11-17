@@ -52,6 +52,7 @@ export const ALL_TOOL_NAMES: readonly string[] = [
   'arma_zeus_find',
   'arma_zeus_module',
   'arma_eden_scene',
+  'arma_eden_find',
   'arma_eden_look',
   'arma_eden_place',
   'arma_eden_edit',

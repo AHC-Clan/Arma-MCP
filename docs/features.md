@@ -20,7 +20,7 @@
 | SQF 실행 | `arma_exec` | 서버, 전체, 특정 클라이언트에서 실행하고 결과를 모은다. 주석은 자동으로 지운다 |
 | 미션 정보 | `arma_mission_info`, `arma_status` | 맵, 미션, 플레이어, 시간, fps 와 CBA, ACE, 전술지도 로드 여부를 본다 |
 | Zeus | `arma_zeus_find`, `arma_zeus_module` | Zeus 화면의 이름으로 대상을 찾고, 모듈을 Zeus 배치와 같은 경로로 실행한다 |
-| Eden 에디터 | `arma_eden_scene`, `arma_eden_look`, `arma_eden_place`, `arma_eden_edit` | 에디터 엔티티를 재서 읽고, 카메라를 옮겨 보고, "옆에", "위에" 같은 관계로 놓고 고친다. 결과마다 지면과 겹침 판정이 붙고 호출 한 번이 실행 취소 한 단계다. [자세히](tools.md#eden-에디터-툴-arma_eden_scene-arma_eden_look-arma_eden_place-arma_eden_edit) |
+| Eden 에디터 | `arma_eden_scene`, `arma_eden_find`, `arma_eden_look`, `arma_eden_place`, `arma_eden_edit` | 에디터 엔티티를 재서 읽고, 자산 패널(유닛, 모듈 등)에서 표시 이름으로 찾고, 카메라를 옮겨 보고, "옆에", "위에" 같은 관계로 놓고 고친다. 결과마다 지면과 겹침 판정이 붙고 호출 한 번이 실행 취소 한 단계다. 에디터에서는 Zeus 툴 대신 이 툴을 쓴다. [자세히](tools.md#eden-에디터-툴-arma_eden_scene-arma_eden_find-arma_eden_look-arma_eden_place-arma_eden_edit) |
 
 ## 결과 확인
 

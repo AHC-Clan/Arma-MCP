@@ -62,9 +62,9 @@ export const CUT =
 
 /**
  * 점수. _q 가 비면 1(목록), 정확 일치 100, 앞부분 60, 포함 40, 낱말이 모두 들어 있으면 25.
- * 호출하는 쪽 스코프의 _q, _tk 를 읽는다.
+ * 호출하는 쪽 스코프의 _q, _tk 를 읽는다. Eden 자산 찾기(edenSqf 의 buildAssetsSqf)도 쓴다.
  */
-const SCORE =
+export const SCORE =
   'private _sc = {params ["_ls"]; if (_q isEqualTo "") exitWith {1}; private _b = 0; ' +
   '{private _l = toLower _x; if (_l isEqualTo _q) then {_b = _b max 100} else ' +
   '{private _i = _l find _q; if (_i == 0) then {_b = _b max 60} else {if (_i > 0) then {_b = _b max 40}}}} forEach _ls; ' +
@@ -72,7 +72,7 @@ const SCORE =
   'if ((_tk findIf {(_a find _x) < 0}) < 0) then {_b = 25}}; _b};';
 
 /** 쿼리 문자열과 낱말. */
-function queryPrelude(query: string): string {
+export function queryPrelude(query: string): string {
   return `private _q = toLower ${sqfString(query.trim())}; private _tk = _q splitString " ";`;
 }
 
@@ -80,7 +80,7 @@ function queryPrelude(query: string): string {
  * _rows 를 점수 내림차순, 거리 오름차순으로 정렬해 _lim 개만 남긴다. _total 에 전체 수.
  * 점수 열과 거리 열 위치를 받는다(거리 열이 없으면 -1).
  */
-function sortAndLimit(scoreCol: number, distCol: number): string {
+export function sortAndLimit(scoreCol: number, distCol: number): string {
   const dist = distCol >= 0 ? `((_x select ${distCol}) max 0)` : '0';
   return (
     'private _dec = []; ' +
@@ -94,7 +94,7 @@ function sortAndLimit(scoreCol: number, distCol: number): string {
  * 문자열 필드를 FIELD_MAX 로 자르고, 그래도 한 행이 예산을 넘으면 dropCols 를 비운다.
  * 그 뒤 행 단위로 페이지를 나눠 _pages 에 담는다.
  */
-function paginate(dropCols: number[], labelCol: number): string {
+export function paginate(dropCols: number[], labelCol: number): string {
   return (
     `_rows = _rows apply {private _r = +_x; {if (_x isEqualType "") then {_r set [_forEachIndex, [_x, ${FIELD_MAX}] call _cut]}} forEach _r; ` +
     `if (count str _r > ${PAGE_BUDGET}) then {{_r set [_x, ""]} forEach ${JSON.stringify(dropCols)}}; ` +

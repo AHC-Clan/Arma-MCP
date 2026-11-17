@@ -7,6 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sanitizeSqf } from '../src/exec/sanitize.js';
 import {
+  ASSET_ROW,
+  buildAssetsSqf,
   buildCameraRestoreSqf,
   buildCameraSqf,
   buildClassSqf,
@@ -88,6 +90,21 @@ test('class: 크기는 지역 단순 물체로 재고 지운다', () => {
   assert.ok(code.includes('createSimpleObject [_c, [0, 0, 2000], true]'));
   assert.ok(code.includes('deleteVehicle _o'));
   assert.ok(code.includes('[["Land_CncBarrier_F","Object"],["hd_dot","Marker"]]'));
+  assert.ok(!code.includes('configClasses'), '후보 찾기는 자산 색인(buildAssetsSqf)이 한다');
+});
+
+test('assets: 에디터 기준(scope 2) 색인을 게임 동안 캐시하고 Zeus 색인과 섞지 않는다', () => {
+  const code = buildAssetsSqf({ query: 'say "hi"', kinds: ['module', 'group'], side: 'WEST', limit: 20, key: 'ea_x' });
+  assertContract(code, /_out$/);
+  assert.ok(code.includes('toLower "say ""hi"""'));
+  assert.ok(code.includes('["module","group"]'));
+  assert.ok(code.includes('private _sd = "WEST"'));
+  assert.ok(code.includes('"getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgVehicles")'));
+  assert.ok(code.includes('uiNamespace setVariable ["AHC_MCP_ea", _ea]'));
+  assert.ok(code.includes('CfgGroups') && code.includes('CfgMarkers'));
+  assert.ok(!code.includes('AHC_MCP_zp'), 'Zeus palette 색인을 쓰지 않는다');
+  assert.ok(!code.includes('curatorAddons'));
+  assert.deepEqual([...ASSET_ROW], ['kind', 'class', 'label', 'path', 'side', 'flags', 'score']);
 });
 
 test('place: 한 실행 취소 단계 안에서 만들고 높이와 방향을 맞춘다', () => {
@@ -109,6 +126,8 @@ test('place: 한 실행 취소 단계 안에서 만들고 높이와 방향을 �
   assert.ok(code.includes('"asl",3.5'));
   assert.ok(code.includes('set3DENSelected'));
   assert.ok(code.includes('nearestTerrainObjects'));
+  // 원점이 아니라 상자 중심을 pos 에 맞추고, 그 뒤 높이를 맞춘다.
+  assert.ok(code.includes('[_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle'));
   const quiet = buildPlaceSqf({ items: [], select: false, neighborRadius: 0, key: 'ep_y' });
   assert.ok(!quiet.includes('set3DENSelected'));
   assert.ok(!quiet.includes('nearestTerrainObjects'));
@@ -129,6 +148,7 @@ test('edit: 옮기기, 돌리기, 이름, 지우기를 한 단계로', () => {
   assert.ok(code.includes('[6,[],180,"keep",0,"",false]'));
   assert.ok(code.includes('[7,[],-1,"keep",0,0,true]'));
   assert.ok(code.includes('delete3DENEntities _del'));
+  assert.ok(code.includes('[_e, _k, _w] call _center'), '옮길 때도 상자 중심을 맞춘다');
 });
 
 test('카메라, 투영, 지형, 실행 취소', () => {

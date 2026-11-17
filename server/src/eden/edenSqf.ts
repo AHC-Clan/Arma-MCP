@@ -12,7 +12,16 @@
 // (BI 의 fn_3den_onKeyDown 이 같은 방식으로 엔티티를 만든다).
 
 import { sqfNumber, sqfString, sqfStringArray } from '../mcp/sqfLiteral.js';
-import { CUT, FIELD_MAX, PAGE_BUDGET, storePages } from '../zeus/zeusSqf.js';
+import {
+  CUT,
+  FIELD_MAX,
+  PAGE_BUDGET,
+  SCORE,
+  paginate,
+  queryPrelude,
+  sortAndLimit,
+  storePages,
+} from '../zeus/zeusSqf.js';
 import type { EdenKind } from './edenGeom.js';
 
 /** 행 열 순서. TS 매퍼(edenRuntime.ts 의 mapRow)가 같은 순서로 읽는다. */
@@ -211,8 +220,8 @@ export function buildSceneSqf(a: SceneSqfArgs): string {
 
 // ---------------------------------------------------------------- 클래스 확인
 
-/** 클래스 한 행: [클래스, 상태(0 없음, 1 크기 잼, 2 있지만 크기 모름), "hx,hy,hz", "후보|후보"]. */
-export const CLASS_ROW = ['class', 'state', 'half', 'suggest'] as const;
+/** 클래스 한 행: [클래스, 상태(0 없음, 1 크기 잼, 2 있지만 크기 모름), "hx,hy,hz"]. */
+export const CLASS_ROW = ['class', 'state', 'half'] as const;
 
 export interface ClassSqfArgs {
   /** [클래스, create3DENEntity 모드] */
@@ -225,7 +234,7 @@ export type EdenMode = 'Object' | 'Logic' | 'Trigger' | 'Marker';
 /**
  * 만들 클래스가 있는지 보고 크기를 잰다. 크기는 지역 단순 물체를 높이 2000 m 에 잠깐 만들어
  * boundingBoxReal 로 재고 바로 지운다(에디터 엔티티가 아니라 실행 취소 기록에 남지 않는다).
- * 없는 클래스는 클래스 이름이나 표시 이름에 조각이 든 공개(scope 2) 클래스를 다섯까지 붙인다.
+ * 없는 클래스의 후보는 여기서 찾지 않는다. arma_eden_find 와 같은 자산 색인(buildAssetsSqf)으로 찾는다.
  */
 export function buildClassSqf(a: ClassSqfArgs): string {
   const list = '[' + a.classes.map(([c, m]) => `[${sqfString(c)},${sqfString(m)}]`).join(',') + ']';
@@ -235,17 +244,14 @@ export function buildClassSqf(a: ClassSqfArgs): string {
     'isNil {',
     CUT,
     GEOM_STR,
-    'private _sug = {params ["_q","_cfg"]; private _ql = toLower _q; ' +
-      'private _cond = format ["getNumber (_x >> ""scope"") >= 2 && {((toLower configName _x) find %1 >= 0) || {(toLower getText (_x >> ""displayName"")) find %1 >= 0}}", str _ql]; ' +
-      '((_cond configClasses _cfg) select [0, 5]) apply {configName _x}};',
     'private _rows = [];',
     `{_x params ["_c","_m"]; private _cfg = configFile >> (["CfgVehicles","CfgMarkers"] select (_m == "Marker"));` +
-      'if (!isClass (_cfg >> _c)) then {_rows pushBack [_c, 0, "", ([_c, _cfg] call _sug) joinString "|"]} else {' +
-      'if (_m != "Object") then {_rows pushBack [_c, 2, "", ""]} else {' +
+      'if (!isClass (_cfg >> _c)) then {_rows pushBack [_c, 0, ""]} else {' +
+      'if (_m != "Object") then {_rows pushBack [_c, 2, ""]} else {' +
       'private _o = createSimpleObject [_c, [0, 0, 2000], true]; ' +
-      'if (isNull _o) then {_rows pushBack [_c, 2, "", ""]} else {' +
+      'if (isNull _o) then {_rows pushBack [_c, 2, ""]} else {' +
       'private _bb = boundingBoxReal _o; deleteVehicle _o; private _mn = _bb select 0; private _mx = _bb select 1; ' +
-      '_rows pushBack [_c, 1, [[((_mx select 0) - (_mn select 0)) / 2, ((_mx select 1) - (_mn select 1)) / 2, ((_mx select 2) - (_mn select 2)) / 2]] call _gstr, ""]}}}} forEach ' +
+      '_rows pushBack [_c, 1, [[((_mx select 0) - (_mn select 0)) / 2, ((_mx select 1) - (_mn select 1)) / 2, ((_mx select 2) - (_mn select 2)) / 2]] call _gstr]}}}} forEach ' +
       list +
       ';',
     paginateRows([2]),
@@ -325,6 +331,17 @@ const SETTLE =
   'private _sz = if (_i >= 0) then {((_hs select _i) select 0) select 2} else {_rt}; _dz = _sz - _bz}}; ' +
   'if (abs _dz > 0.001) then {_e set3DENAttribute ["position", [_p select 0, _p select 1, (_p select 2) + _dz]]}};';
 
+/**
+ * 상자 중심을 _w([x, y])에 맞춘다. 서버가 푸는 좌표는 상자 중심인데 위치 속성은 모델 원점이라,
+ * 원점이 상자 중심에서 벗어난 모델(컨테이너 숙소는 약 1 m)은 그만큼 어긋난다. 방향을 넣은 뒤 재서 그 차이만큼 옮긴다.
+ * _w 가 비었거나 상자가 없는 종류(마커, 트리거, 로직)는 건드리지 않는다.
+ */
+const CENTER =
+  'private _center = {params ["_e","_k","_w"]; if (count _w < 2 || {!(_e isEqualType objNull)} || {_k in ["trigger","logic"]}) exitWith {}; ' +
+  'private _p = [_e, "position", getPosATL _e] call _attr; ([_e] call _meas) params ["_c"]; ' +
+  'private _dx = (_w select 0) - (_c select 0); private _dy = (_w select 1) - (_c select 1); ' +
+  'if (abs _dx > 0.001 || {abs _dy > 0.001}) then {_e set3DENAttribute ["position", [(_p select 0) + _dx, (_p select 1) + _dy, _p select 2]]}};';
+
 /** 방향. 마커는 rotation 이 수 하나, 나머지는 [x, y, z] 이고 z 가 방위각이다. */
 const ROTATE =
   'private _rot = {params ["_e","_k","_d"]; if (_k == "marker") then {_e set3DENAttribute ["rotation", _d]} else ' +
@@ -360,6 +377,7 @@ export function buildPlaceSqf(a: PlaceSqfArgs): string {
     'isNil {',
     PRELUDE,
     SETTLE,
+    CENTER,
     ROTATE,
     'private _new = []; private _bad = [];',
     'collect3DENHistory {' +
@@ -368,10 +386,10 @@ export function buildPlaceSqf(a: PlaceSqfArgs): string {
       'if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""}) then {_bad pushBack _forEachIndex} else {' +
       'private _k = [_e] call _kindOf; [_e, _k, _d] call _rot; ' +
       'if (_nm != "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; ' +
-      '_new pushBack [_e, _k, _zk, _zv]}} forEach ' +
+      '_new pushBack [_e, _k, _zk, _zv, _xy]}} forEach ' +
       items +
       '; ' +
-      '{_x call _settle} forEach _new;' +
+      '{_x params ["_e","_k","_zk","_zv","_w"]; [_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle} forEach _new;' +
       '};',
     a.select ? 'set3DENSelected (_new apply {_x select 0});' : '',
     'private _T = _new apply {_x select 0};',
@@ -412,6 +430,7 @@ export function buildEditSqf(a: EditSqfArgs): string {
     'isNil {',
     PRELUDE,
     SETTLE,
+    CENTER,
     ROTATE,
     'private _ed = []; private _del = []; private _miss = [];',
     'collect3DENHistory {' +
@@ -421,10 +440,10 @@ export function buildEditSqf(a: EditSqfArgs): string {
       'if (count _xy > 1) then {private _p = [_e, "position", getPosATL _e] call _attr; _e set3DENAttribute ["position", [_xy select 0, _xy select 1, _p param [2, 0]]]}; ' +
       'if (_d >= 0) then {[_e, _k, _d] call _rot}; ' +
       'if (_nm isEqualType "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; ' +
-      '_ed pushBack [_e, _k, _zk, _zv]}}} forEach ' +
+      '_ed pushBack [_e, _k, _zk, _zv, _xy]}}} forEach ' +
       ops +
       '; ' +
-      '{_x call _settle} forEach _ed; ' +
+      '{_x params ["_e","_k","_zk","_zv","_w"]; [_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle} forEach _ed; ' +
       'if (_del isNotEqualTo []) then {delete3DENEntities _del};' +
       '};',
     'private _T = _ed apply {_x select 0};',
@@ -440,6 +459,80 @@ export function buildEditSqf(a: EditSqfArgs): string {
 export function buildUndoSqf(n: number): string {
   const k = Math.max(1, Math.min(50, Math.trunc(n)));
   return `${GUARD} for "_i" from 1 to ${k} do {do3DENAction "Undo"}; ["OK", ${k}]`;
+}
+
+// ---------------------------------------------------------------- 자산 목록 (arma_eden_find)
+
+/** 에디터 자산 패널의 종류. group 은 CfgGroups 편성, marker 는 CfgMarkers 다. */
+export type AssetKind = 'unit' | 'vehicle' | 'object' | 'module' | 'group' | 'marker';
+export const ASSET_KINDS: readonly AssetKind[] = ['unit', 'vehicle', 'object', 'module', 'group', 'marker'];
+/** 자산 행의 열 순서. */
+export const ASSET_ROW = ['kind', 'class', 'label', 'path', 'side', 'flags', 'score'] as const;
+/** 자산 행 flags 비트. is3DEN 은 Eden 속성 창을 쓰는 모듈(config is3DEN = 1), zeus 는 Zeus 목록에도 있는 것(scopeCurator 2). */
+export const AF = { is3DEN: 1, zeus: 2 } as const;
+
+/**
+ * 에디터 자산 패널 색인을 uiNamespace(AHC_MCP_ea)에 만든다. 모드 구성은 게임을 다시 켜야 바뀌므로 게임 동안 캐시한다.
+ * Zeus 색인(zeusSqf 의 PALETTE_INDEX)과 기준이 다르다. Zeus 는 scopeCurator 2 를 담고, 에디터는 scope 2 를 담는다.
+ * 그래서 에디터에만 있는 모듈이 들어가고 Zeus 전용 모듈은 빠진다.
+ * 경로: 유닛과 차량은 세력 > editorSubcategory, 물체는 editorCategory > editorSubcategory, 모듈은 category.
+ * 진영: 유닛과 차량은 config side, 물체는 EMPTY(에디터의 빈 물체 탭). 표시 이름은 이 게임의 언어다.
+ * 색인 행: [kind, class, 표시 이름, 경로, side, flags].
+ */
+const ASSET_INDEX =
+  'private _ea = uiNamespace getVariable ["AHC_MCP_ea", []]; if (_ea isEqualTo []) then {' +
+  'private _sn = ["EAST","WEST","GUER","CIV"]; ' +
+  'private _dn = {params ["_cfg","_n"]; if (_n == "") exitWith {""}; getText (configFile >> _cfg >> _n >> "displayName")}; ' +
+  '{private _c = _x; private _cl = configName _c; ' +
+  'private _kd = if (_cl isKindOf "Logic") then {"module"} else {if (_cl isKindOf "CAManBase") then {"unit"} else {if (_cl isKindOf "AllVehicles") then {"vehicle"} else {"object"}}}; ' +
+  'private _sub = ["CfgEditorSubcategories", getText (_c >> "editorSubcategory")] call _dn; ' +
+  'private _pa = if (_kd == "module") then {["CfgFactionClasses", getText (_c >> "category")] call _dn} else {' +
+  'private _top = if (_kd == "object") then {["CfgEditorCategories", getText (_c >> "editorCategory")] call _dn} else {["CfgFactionClasses", getText (_c >> "faction")] call _dn}; ' +
+  'if (_sub == "") then {_top} else {_top + " > " + _sub}}; ' +
+  'private _sx = if (_kd in ["unit","vehicle"]) then {_sn param [getNumber (_c >> "side"), ""]} else {["", "EMPTY"] select (_kd == "object")}; ' +
+  `_ea pushBack [_kd, _cl, getText (_c >> "displayName"), _pa, _sx, ${AF.is3DEN} * (parseNumber (getNumber (_c >> "is3DEN") > 0)) + ${AF.zeus} * (parseNumber (getNumber (_c >> "scopeCurator") == 2))]` +
+  '} forEach ("getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgVehicles")); ' +
+  '{private _sdc = _x; {private _fc = _x; {private _ca = _x; {' +
+  '_ea pushBack ["group", format ["%1|%2|%3|%4", configName _sdc, configName _fc, configName _ca, configName _x], ' +
+  'getText (_x >> "name"), getText (_fc >> "name") + " > " + getText (_ca >> "name"), _sn param [getNumber (_x >> "side"), ""], 0]' +
+  '} forEach ("true" configClasses _ca)} forEach ("true" configClasses _fc)} forEach ("true" configClasses _sdc)} forEach ("true" configClasses (configFile >> "CfgGroups")); ' +
+  '{_ea pushBack ["marker", configName _x, getText (_x >> "name"), getText (configFile >> "CfgMarkerClasses" >> getText (_x >> "markerClass") >> "displayName"), "", 0]} ' +
+  'forEach ("getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgMarkers")); ' +
+  'uiNamespace setVariable ["AHC_MCP_ea", _ea]};';
+
+export interface AssetsSqfArgs {
+  query: string;
+  kinds: AssetKind[];
+  /** WEST, EAST, GUER, CIV, EMPTY 또는 빈 문자열(모두). */
+  side: string;
+  limit: number;
+  key: string;
+}
+
+/**
+ * 에디터 자산 패널에서 이름으로 찾는다. 점수는 Zeus palette 와 같다(표시 이름, 클래스, 경로).
+ * 반환: [합계, 쪽수, 첫 쪽 행 배열, [게임 언어, 색인 크기]]. 행은 ASSET_ROW.
+ */
+export function buildAssetsSqf(a: AssetsSqfArgs): string {
+  return [
+    GUARD,
+    queryPrelude(a.query),
+    `private _K = ${sqfStringArray(a.kinds)}; private _sd = ${sqfString(a.side)}; private _lim = ${Math.trunc(a.limit)};`,
+    CUT,
+    SCORE,
+    'private _out = [];',
+    'isNil {',
+    ASSET_INDEX,
+    'private _rows = []; {_x params ["_kd","_cl","_lb","_pa","_sx"]; ' +
+      'if ((count _K == 0 || {_kd in _K}) && {_sd == "" || {_sx == _sd}}) then {' +
+      'private _s = [[_lb, _cl, _pa]] call _sc; if (_s > 0) then {_rows pushBack (_x + [_s])}}} forEach _ea;',
+    sortAndLimit(6, -1),
+    paginate([3], 2),
+    storePages(a.key),
+    '_out = [_total, count _pages, _pages select 0, [language, count _ea]];',
+    '};',
+    '_out',
+  ].join(' ');
 }
 
 // ---------------------------------------------------------------- 카메라
