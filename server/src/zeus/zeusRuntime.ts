@@ -200,11 +200,11 @@ export interface PagedResult {
 
 /**
  * 첫 exec 가 [합계, 쪽수, 첫 쪽, meta] 를 돌려주면, 남은 쪽을 같은 머신에서 이어 받는다.
- * 마지막 쪽을 받을 때 게임 쪽 보관 키를 지운다.
+ * 마지막 쪽을 받을 때 게임 쪽 보관 키를 지운다. Eden 툴도 같은 페이지 형식을 쓴다.
  */
 export async function runPaged(
   deps: Deps,
-  machine: ZeusMachine,
+  machine: Pick<ZeusMachine, 'mode' | 'target'>,
   code: string,
   key: string,
   label: string,

@@ -72,12 +72,13 @@ export function statusReadiness(deps: Deps): Readiness {
   const telemetryAgeMs = snap.receivedAt > 0 ? Date.now() - snap.receivedAt : -1;
   const freshnessLimitMs = Math.max(10_000, deps.cfg?.link?.staleAfterMs ?? 15_000);
   const telemetryFresh = telemetryAgeMs >= 0 && telemetryAgeMs < freshnessLimitMs;
+  // 에디터의 새 미션(저장 전)은 missionName 이 비어 있다. 에디터 브리지는 그래도 준비된 것이다.
   const bridgeReady =
     rawConnected &&
     sessionInfoReceived &&
     telemetryFresh &&
     snap.world.trim().length > 0 &&
-    snap.mission.trim().length > 0;
+    (snap.mission.trim().length > 0 || snap.editor === true);
   return {
     rawConnected,
     sessionInfoReceived,
@@ -316,6 +317,16 @@ export function registerStatusTool(server: ToolHost, shared: Deps): void {
               : ''),
         );
       }
+      // 에디터 연결이면 배치와 편집은 arma_eden_* 로 유도한다. 원시 SQF 로 3DEN 명령을 짜면
+      // 실행 취소 묶음과 배치 판정이 빠진다.
+      if (connected && snap.editor === true) {
+        hints.push(
+          'Eden 에디터에 연결됨 — 장면 읽기는 arma_eden_scene, 자산 패널에서 찾기는 arma_eden_find, ' +
+            '화면 확인은 arma_eden_look, 배치와 편집은 arma_eden_place, arma_eden_edit 를 쓰세요. ' +
+            'Zeus 툴은 에디터에서 쓰지 않습니다. arma_exec 는 mode=server 만 됩니다. ' +
+            '바뀐 내용은 사용자가 저장하기 전까지 파일에 쓰이지 않습니다.',
+        );
+      }
       // 배포된 애드온이 데몬보다 뒤처지면 연결은 되지만 새 브리지 기능이 빠질 수 있다.
       // 다만 patch 차이만으로 재배포를 권하지는 않는다 — exec 경로(프레임 형식·spawn 격리·
       // pushResult)는 major.minor 안에서 호환되므로, 라이브 서버를 멈출 이유가 되지 못한다.
@@ -385,7 +396,8 @@ export function registerStatusTool(server: ToolHost, shared: Deps): void {
         tacmap,
         tacmapZeusTool,
         hints,
-        mission: connected ? { world: snap.world, mission: snap.mission } : null,
+        // editor: Eden 에디터 브리지면 true, 미션이면 false, 구버전 PBO 면 null.
+        mission: connected ? { world: snap.world, mission: snap.mission, editor: snap.editor ?? null } : null,
         // 최근 텔레메트리의 게임 시간과 창 상태. SP 는 paused 면 missionTime 이 멈추고
         // sleep 과 waitUntil 도 멈춘다. 브리지 링크는 그대로 산다.
         game:

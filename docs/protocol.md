@@ -37,7 +37,7 @@ MCP 서버(Node/TS) ↔ `arma_mcp_x64.dll`(인게임 확장) 간 계약 문서. 
 
 ### hello
 ```json
-{"v":1,"type":"hello","role":"arma-ext","ver":"ArmaMCP 0.5.14","pid":4242}
+{"v":1,"type":"hello","role":"arma-ext","ver":"ArmaMCP 0.5.15","pid":4242}
 ```
 - `pid`: 게임 프로세스 id(0.5.0 부터). 라우팅에는 쓰지 않고 `arma_status` 의 `dllPid` 진단에만 쓴다.
   이전 DLL 은 보내지 않는다.
@@ -47,9 +47,11 @@ MCP 서버(Node/TS) ↔ `arma_mcp_x64.dll`(인게임 확장) 간 계약 문서. 
 {"v":1,"type":"sessionInfo","world":"Altis","mission":"co40_op","briefing":"Operation X",
  "server":"hostname","dedicated":1,"multiplayer":1,"cba":1,
  "ace":1,"aceVersion":"3.21.0.110","aceComponents":["ace_common","ace_medical","ace_cargo"],
- "tacmap":1,"tacmapZeusTool":1,"t":123.4}
+ "tacmap":1,"tacmapZeusTool":1,"editor":0,"t":123.4}
 ```
-- `dedicated`/`multiplayer`/`cba`/`ace`/`tacmap`/`tacmapZeusTool`는 0|1 숫자.
+- `dedicated`/`multiplayer`/`cba`/`ace`/`tacmap`/`tacmapZeusTool`/`editor`는 0|1 숫자.
+- `editor`: `is3DEN`. Eden 에디터 브리지(`fn_initEditor`)가 보내면 1 이다. 에디터는 `missionName` 이 빌 수 있어
+  서버는 `editor` 가 1 이면 미션 이름 없이도 `bridgeReady` 로 친다. 구버전 PBO 는 보내지 않고 서버는 `null` 로 둔다.
 - `aceVersion`: ACE `CfgPatches >> ace_main >> version` (없으면 "").
 - `aceComponents`: 감지된 ACE 컴포넌트 CfgPatches 클래스 배열(예 `ace_medical_treatment`). ACE 없으면 `[]`.
   에이전트는 서브시스템 함수를 호출하기 전 해당 컴포넌트가 목록에 있는지 확인한다.

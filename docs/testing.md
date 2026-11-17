@@ -641,6 +641,89 @@ Arma 는 메시지로 보낸 클릭을 받지 않는다. 화면 도구로 누를
 
 `ARMA_MCP_CONNECT_HIDE` 는 시험 전용이다. 쉼표로 나눈 이름을 찾지 못한 것으로 친다.
 
+## 실게임 E2E: Eden 에디터 브리지와 `arma_eden_*`
+
+전제: 이 기능이 든 PBO(`fn_initEditor`, `fn_stopEditor`, `Cfg3DEN >> EventHandlers`)와 데몬. DLL 은 바뀌지 않았다.
+`dist\release\@AHC_ArmaMCP` 하나만 실어 BattlEye 없이 띄우고 메인 화면에서 에디터를 연다. 격리 데몬이면 그 파이프로 띄운다.
+사람이 에디터에서 만든 것을 툴이 바꾸므로, 시험은 빈 새 미션이나 시험용으로 복사한 미션에서 한다.
+
+아직 아무도 실게임으로 보지 않은 것이다. 각 단계의 결과와 RPT 근거를 이 표 아래에 적는다.
+
+| # | 실행 | 기대 | 실패하면 |
+|---|---|---|---|
+| 1 | Stratis 로 에디터를 연다 | RPT 에 `[ArmaMCP] editor bridge starting on Stratis (, gen 1)` 이 한 줄. `onTerrainNew` 와 `onMissionNew` 가 같은 프레임이면 줄이 하나, 아니면 둘이고 gen 이 오른다 | 줄이 없으면 `Cfg3DEN` 클래스가 병합되지 않았다. `configFile >> "Cfg3DEN" >> "EventHandlers" >> "AHC_ArmaMCP"` 를 디버그 콘솔에서 본다 |
+| 2 | `arma_status` | `linkPhase:"live"`, `bridgeReady:true`, `mission.editor:true`, hints 에 에디터 안내 | `pre-bridge` 에 머물면 에디터에서 `EachFrame` 이 돌지 않거나 `status` 가 접속을 못 본다 |
+| 3 | `arma_exec { code:"[is3DEN, isServer, isMultiplayer]" }` | `ARRAY: [true,...]`. **`isServer` 값을 여기에 적는다** | 결과가 오지 않으면 에디터에서 `ExtensionCallback` 이 안 불린다. DLL 의 `poll` 이 프레임을 돌려주게 바꾸는 후속 작업이 필요하다 |
+| 4 | `arma_exec { code:"1", mode:"all" }` | `ERROR: mode 'all' is unavailable in the Eden editor (use server)` | |
+| 5 | 에디터에 물체 몇 개를 놓고 `arma_eden_scene {}` | 놓은 것이 모두 나온다. `size` 가 사물 크기와 맞고 땅에 놓은 것은 `ground` | `size` 가 0 이면 에디터 엔티티의 `boundingBoxReal` 이 다르다. `z.attr` 와 `z.bottom` 의 관계를 적는다 |
+| 6 | 콘크리트 벽 하나의 id 로 `arma_eden_place { items:[{ class:"Land_CncBarrier_F", beside:{ id, side:"front" } }] }` | 벽 앞에 맞닿아 놓이고 `ground`. `overlaps` 에 그 벽이 없다. 에디터에서 새 물체가 선택돼 있다 | 겹치면 `create3DENEntity` 뒤 `rotation` 이 먹지 않았거나 크기 측정(`createSimpleObject`)이 다르다 |
+| 7 | 탁자 위에 `arma_eden_place { items:[{ class:"Land_Can_V3_F", on:<탁자 id> }] }` | 캔이 탁자 윗면에 있고 `ground`(탁자가 표면) | 뜨거나 묻히면 `set3DENAttribute "position"` 의 z 가 ATL 이 아니다. 실제 기준을 적는다 |
+| 8 | 경사진 곳에 건물을 `at:[x,y]` 로 | `sunk` 와 `slope` 가 함께 나온다 | |
+| 9 | Ctrl+Z 한 번, 또는 `arma_eden_edit { undo:1 }` | 7 에서 만든 캔만 사라진다(실행 취소 한 단계) | 여러 단계로 쪼개지면 `collect3DENHistory` 가 `isNil` 안에서 묶지 못한다 |
+| 10 | `arma_eden_edit { ops:[{ id:<6의 벽>, turn:90 }, { id:<다른 것>, by:[0,3] }] }` | 둘 다 바뀌고 Ctrl+Z 한 번에 둘 다 되돌아간다 | |
+| 11 | `arma_eden_look { ids:[...], views:["iso","top","front"] }` | 이미지 셋. `labels` 의 비율이 이미지 속 물체 자리와 맞다. 끝나면 카메라가 처음 자리다 | 첫 이미지가 옮기기 전 화면이면 `delayMs` 를 늘린다 |
+| 12 | 없는 클래스 `B_MRAP_01` 로 place | 아무것도 만들지 않고 `candidates` 에 `B_MRAP_01_F` 가 있다 | |
+| 13 | 미리보기(Play) 를 누른다 | RPT 에 `editor bridge stopped for preview` 뒤 `server bridge starting`. `arma_status` 의 `mission.editor:false` | 미리보기 브리지가 안 뜨면 `AHC_ArmaMCP_serverInit` 이 남았다(에디터가 missionNamespace 를 미리보기에 넘긴다) |
+| 14 | 미리보기를 끝낸다 | `editor bridge starting ... gen N+1`, `mission.editor:true`. `arma_eden_scene` 이 다시 된다 | 미리보기의 `EachFrame` 이 남아 `poll` 이 두 번 돌면 RPT 의 `[EXEC] result` 가 겹친다. 그때 `fn_initServer` 의 처리기에도 세대 확인을 넣는다 |
+| 15 | 다른 미션을 연다(`MissionLoad`) | 연결이 다시 서고 gen 이 오른다. RPT 에 매 프레임 오류가 없다 | |
+| 16 | 에디터를 닫고 메인 화면으로 | 15초 안에 `linkPhase` 가 `none` 이나 `pre-bridge`. 메인 화면 연결 창이 그대로 동작한다 | |
+| 17 | 회귀: 같은 PBO 로 `arma-mcp play --modset none` | 미션 브리지가 전과 같다. RPT 오류가 없다 | |
+| 18 | `arma_eden_find { kind:"module", query:"<패널에 보이는 모듈 이름>" }` 와 `{ kind:"object", query:"<패널의 빈 물체 이름>" }` | 자산 패널에 보이는 이름과 경로로 나온다. 에디터에만 있는 모듈(Zeus 목록에 없는 것)이 나오고 `zeus:false` 다. 첫 호출 `exec.durationMs` 를 적는다 | 패널에 없는 것이 섞이거나 있는 것이 빠지면 그 클래스의 `scope`, `scopeCurator`, `editorCategory` 를 적어 색인 기준을 고친다 |
+| 19 | 18 의 결과 `place` 를 그대로 `arma_eden_place` 에 | 모듈은 `type:'logic'` 으로 만들어진다 | |
+| 20 | 원점이 치우친 모델(`Land_Cargo_House_V1_F`)을 `at:[x,y]` 로 놓고, 그 앞에 `beside` 로 하나 더 | `created[].at` 이 준 `[x, y]` 와 0.05 m 안에서 같다. `beside` 한 것이 맞닿고 `overlaps` 에 서로가 없다 | 어긋나면 `_center` 가 방향을 넣은 뒤가 아니라 앞에서 쟀다 |
+| 21 | 에디터에서 `arma_zeus_find { source:"palette", query:"x" }` | 게임에 보내지 않고 `ok:false`, `hint` 에 `arma_eden_find`. RPT 에 그 시각의 `[EXEC]` 줄이 없다 | |
+
+체크포인트.
+
+- 3, 6, 7, 9 가 이 기능의 수용 기준이다. 3 은 exec 경로 전체(`ExtensionCallback`, `isServer` 우회, spawn), 6 과 7 은 크기와 높이 기준,
+  9 는 실행 취소 묶음이다.
+- 에디터는 저장하지 않았으므로 끝나면 미션을 저장하지 않고 닫는다.
+
+2026-11-17 첫 실행(Arma 3 2.22, Fjord(Global Ops Terrains), 저장소 데몬 0.5.14, BattlEye 없음). HEMTT 가 없어 PBO 는 바이너리화 없이
+원본 파일을 그대로 묶었고(config.cpp, sqf, stringtable.xml), DLL 은 바뀌지 않아 워크숍의 0.5.11 을 썼다.
+에디터는 빈 미션의 `mission.sqm` 경로를 실행 인자로 줘서 바로 열었다.
+
+- 1: `editor bridge starting on go_map_fjord (mcp_eden_test, gen 1)` 과 같은 초의 `gen 2` 두 줄. 실행 결과가 겹치지 않았다.
+- 2: `game live, go_map_fjord, mcp_eden_test, 브리지 준비됨`.
+- 3: `[true,true,false,true,0]`. 에디터에서 `ExtensionCallback` 이 불리고 **`isServer` 는 `true`** 다.
+- 4: `ERROR: mode 'all' is unavailable in the Eden editor (use server)`. CLI 가 그 뒤에 nil 안내 줄을 하나 더 찍는다(표시만의 문제).
+- 5: 놓은 건물 하나가 나오고 `size [6.24,8.86,4.86]`, `ground`.
+- 놓기: 댐(2276, 1157) 동쪽 호숫가 `at:[2404,1081]`, `face:[2276,1157]` 로 `Land_Cargo_House_V1_F`. `dir 300.7`, `ground`, `slope 0.46`,
+  옆 전나무와 상자 겹침 1.67 m. 직접 잰 값과 같았다: 상자 바닥 357.16, 네 모서리 아래 지형 356.71~357.16(한 모서리가 닿음).
+  위치 속성 z 는 1.95 로 `getPosATL` 과 같다(ATL). 크기 측정(`createSimpleObject`)은 에디터 엔티티의 `boundingBoxReal` 과 같았다.
+- 11: `iso` 하나로 카메라가 옮겨지고 `labels` 가 `0.5, 0.5` 였다. 다만 카메라가 나무 속에 들어가 건물을 가렸다. 시점은 가림을 보지 않는다.
+- 12: `B_MRAP_01` 은 만들지 않고 후보 `B_MRAP_01_F`, `B_MRAP_01_gmg_F`, `B_MRAP_01_hm`.
+- RPT 의 스크립트 오류 0 줄.
+- 6 대신: 건물 앞에 `beside:{ id:1, side:"front", gap:1.5 }` 로 `Land_CampingTable_F`. 건물 중심에서 6.3 m(반 길이 4.43 + 탁자 반 폭 0.4 + 1.5),
+  같은 방향, `ground`, 겹침 없음. 에디터가 작은 물체를 지면 경사에 맞춰 `tilt 4.39` 로 기울였다.
+- 7: 그 탁자 `on:2` 에 `Land_Laptop_unfolded_F`, `Land_Can_V3_F`, `Land_Map_F` 를 `offset` 으로 한 번에. 셋 다 `ground`(탁자 윗면),
+  바닥 357.76~357.84, 위치 속성 z 0.82~0.84(탁자 높이), 탁자 기울기를 따랐다. 화면에서도 탁자 위에 놓였다.
+  `arma_eden_look { views:["front"] }` 는 id 넷을 남쪽에서 4.7 m 로 담았다.
+- 못 본 것: 6(벽 앞), 8, 9·10(실행 취소 묶음), 13~17(미리보기, 다른 미션, 회귀). HEMTT 빌드(lint, 바이너리화)도 아직이다.
+
+2026-11-17 둘째 실행(Arma 3 2.22, Stratis, 0.5.15 후보). HEMTT 로 구운 PBO 와 0.5.15 DLL 이 든 `dist\release\@AHC_ArmaMCP` 하나만 실었다.
+격리 데몬(별도 포트, 파이프, 스택 `eden`)을 저장소 번들로 띄웠다. 에디터는 첫 실행처럼 `mission.sqm` 경로를 실행 인자로 줘서 열었다.
+
+- 1: `editor bridge starting on stratis (mcp_eden_test, gen 1)` 한 줄.
+- 2 ~ 4: `mission.editor:true` 와 에디터 안내, `[is3DEN, isServer, isMultiplayer, hasInterface]` 는 `[true,true,false,true]`, `mode:"all"` 은 거절.
+- 6: 동쪽(90도)을 보는 `Land_CncBarrier_F` 앞에 `beside:{ id:0, side:"front", gap:0 }`. x 가 벽 두께 두 번(0.36 m) 옮겨져 맞닿고 `ground`, 겹침 없음.
+- 7: 탁자 위 `Land_Can_V3_F` 의 바닥이 지면 + 0.82(탁자 높이), `ground`.
+- 9: 캔을 놓은 뒤 `undo:1` 하니 캔만 사라졌다.
+- 10: 벽 `turn:90` 과 탁자 `by:[0,3]` 를 한 호출로. 둘 다 바뀌고 `overlaps` 에 돌린 벽과 옆 벽이 나왔다. `undo:1` 한 번에 둘 다 되돌아갔다.
+- 마커: `hd_dot` 을 놓고 `arma_eden_edit` 로 `at` 을 바꿨다. 옮겨졌고 RPT 오류가 없다(0.5.15 에서 고친 `getPosATL` 오류).
+- 11: `views:["iso"]` 이미지 속 탁자와 유닛 자리가 `labels` 비율과 맞고 카메라가 원래 자리로 돌아갔다.
+- 13: `do3DENAction "MissionPreview"` 로 미리보기. `editor bridge stopped for preview` 뒤 `server bridge starting`, `mission.editor:false`.
+- 14: 미리보기 결과 화면의 계속 버튼(`ctrlActivate ((findDisplay 50) displayCtrl 1)`) 뒤 `editor bridge starting ... gen 3`.
+  그 뒤 exec 하나에 RPT 의 `[EXEC]` 줄과 `result` 줄이 하나씩이다. 미리보기의 처리기는 남지 않았다.
+  결과 화면에서는 미션 시간이 멈춰 `spawn` 안의 `sleep` 이 끝나지 않는다. 버튼은 unscheduled 로 누른다.
+- 16: `(findDisplay 313) closeDisplay 2` 로 메인 화면. 약 15초 뒤 `stale`, 이어 `pre-bridge`.
+- 17: 같은 모드로 `arma-mcp play` 한 미션은 `server bridge starting` 이 전과 같다. `arma_eden_scene` 은 미션이라 거절, `arma_zeus_find` 는 동작, RPT 오류 0.
+- 18, 19: `arma_eden_find { kind:"module", query:"ModuleHideTerrainObjects" }` 가 `is3DEN:true, zeus:false` 로 나오고 그 `place` 로 모듈을 만들었다.
+  한국어 게임에서 `query:"Zeus"` 는 0건이다. 표시 이름이 번역돼 있어 클래스 조각이나 한국어 이름으로 찾는다.
+- 21: 에디터에서 `arma_zeus_find` 는 `ok:false` 와 `arma_eden_find` 안내.
+- 유닛(`B_Soldier_F`)은 모델 상자 바닥이 원점보다 0.1 m 아래라 `ground` 가 `sunk -0.1` 로 나온다. 깊이를 음수로 적는 표기다.
+- 못 본 것: 8(경사면 건물), 15(다른 미션 열기), 20(원점이 치우친 모델).
+
 ## 알려진 한계
 
 - `<nil>` 은 정상 nil 과 엔진이 삼킨 soft error 를 인밴드로 구분할 수 없다 — RPT 가 유일한 진실(`rptErrors` 자동 첨부로 대응).

@@ -29775,7 +29775,7 @@ var readBodyDirect = (request) => {
   const promise2 = new Promise((resolve, reject) => {
     const chunks = [];
     let settled = false;
-    const finish = (callback) => {
+    const finish2 = (callback) => {
       if (settled) return;
       settled = true;
       cleanup();
@@ -29784,7 +29784,7 @@ var readBodyDirect = (request) => {
     const recoverCompleteBodyAfterDisconnect = (error62) => {
       const streamError = incoming.errored ?? error62;
       if (!isRecoverableDisconnectedIncoming(incoming) || streamError && streamError.code !== "ECONNRESET") return false;
-      finish(() => {
+      finish2(() => {
         const recovered = readBodyBufferedBeforeDisconnect(incoming, chunks);
         if (recovered instanceof Error) reject(recovered);
         else if (recovered === void 0) reject(error62 ?? normalizeAbortError(request, incoming));
@@ -29799,7 +29799,7 @@ var readBodyDirect = (request) => {
       chunks.push(toBufferChunk(chunk, incoming.readableEncoding));
     };
     const onEnd = () => {
-      finish(() => {
+      finish2(() => {
         const buffer = chunks.length === 1 ? chunks[0] : Buffer.concat(chunks);
         request[bodyBufferKey] = buffer;
         resolve(buffer);
@@ -29807,7 +29807,7 @@ var readBodyDirect = (request) => {
     };
     const onError = (error62) => {
       if (recoverCompleteBodyAfterDisconnect(error62)) return;
-      finish(() => {
+      finish2(() => {
         reject(error62);
       });
     };
@@ -29817,7 +29817,7 @@ var readBodyDirect = (request) => {
         return;
       }
       if (recoverCompleteBodyAfterDisconnect()) return;
-      finish(() => {
+      finish2(() => {
         reject(normalizeAbortError(request, incoming));
       });
     };
@@ -42045,7 +42045,7 @@ function registerMissionTool(server, shared) {
     "arma_mission_info",
     {
       title: "Arma \uBBF8\uC158 \uC815\uBCF4",
-      description: "\uC9C4\uD589 \uC911 \uBBF8\uC158 \uC815\uBCF4(world, mission, briefing, players, time, fps, fpsMin, scripts, paused, focused)\uB97C \uBC18\uD658\uD55C\uB2E4. \uAE30\uBCF8\uC740 \uC11C\uBC84\uAC00 \uCE90\uC2DC\uD55C \uCD5C\uADFC \uD154\uB808\uBA54\uD2B8\uB9AC(\uC989\uB2F5, \uD504\uB808\uC784 \uD504\uB9AC\uC988\uC5D0\uB3C4 \uAC15\uAC74). fresh=true \uBA74 \uAC8C\uC784\uC5D0 \uC989\uC2DC \uAC31\uC2E0\uC744 \uC694\uCCAD\uD574 \uB77C\uC6B4\uB4DC\uD2B8\uB9BD \uD6C4 \uBC18\uD658. \uBBF8\uC811\uC18D \uC2DC lastKnown \uBC18\uD658.",
+      description: "\uC9C4\uD589 \uC911 \uBBF8\uC158 \uC815\uBCF4(world, mission, briefing, editor, players, time, fps, fpsMin, scripts, paused, focused)\uB97C \uBC18\uD658\uD55C\uB2E4. \uAE30\uBCF8\uC740 \uC11C\uBC84\uAC00 \uCE90\uC2DC\uD55C \uCD5C\uADFC \uD154\uB808\uBA54\uD2B8\uB9AC(\uC989\uB2F5, \uD504\uB808\uC784 \uD504\uB9AC\uC988\uC5D0\uB3C4 \uAC15\uAC74). fresh=true \uBA74 \uAC8C\uC784\uC5D0 \uC989\uC2DC \uAC31\uC2E0\uC744 \uC694\uCCAD\uD574 \uB77C\uC6B4\uB4DC\uD2B8\uB9BD \uD6C4 \uBC18\uD658. \uBBF8\uC811\uC18D \uC2DC lastKnown \uBC18\uD658.",
       inputSchema: {
         stack: STACK_INPUT,
         fresh: external_exports.boolean().optional().describe("true \uBA74 telemetryRequest \uB97C \uBCF4\uB0B4 \uCD5C\uC2E0\uAC12\uC744 \uBC1B\uC544\uC628 \uB4A4 \uBC18\uD658.")
@@ -42079,6 +42079,8 @@ function registerMissionTool(server, shared) {
         aceComponents: deps.telemetry.aceComponents(),
         tacmap: deps.telemetry.tacmap(),
         tacmapZeusTool: deps.telemetry.tacmapZeusTool(),
+        // Eden 에디터 브리지면 true. 에디터에는 플레이어가 없고 missionTime 이 흐르지 않는다.
+        editor: snap.editor ?? null,
         missionTime: snap.missionTime,
         date: snap.date,
         fps: snap.fps,
@@ -42101,7 +42103,7 @@ import { readdir as readdir3 } from "node:fs/promises";
 import path18 from "node:path";
 
 // src/version.ts
-var ARMA_MCP_VERSION = "0.5.14";
+var ARMA_MCP_VERSION = "0.5.15";
 function compareVersions(left, right) {
   const parse3 = (value) => value.split(".").map((part) => {
     const numeric = Number.parseInt(part, 10);
@@ -44267,7 +44269,7 @@ function statusReadiness(deps) {
   const telemetryAgeMs = snap.receivedAt > 0 ? Date.now() - snap.receivedAt : -1;
   const freshnessLimitMs = Math.max(1e4, deps.cfg?.link?.staleAfterMs ?? 15e3);
   const telemetryFresh = telemetryAgeMs >= 0 && telemetryAgeMs < freshnessLimitMs;
-  const bridgeReady = rawConnected && sessionInfoReceived && telemetryFresh && snap.world.trim().length > 0 && snap.mission.trim().length > 0;
+  const bridgeReady = rawConnected && sessionInfoReceived && telemetryFresh && snap.world.trim().length > 0 && (snap.mission.trim().length > 0 || snap.editor === true);
   return {
     rawConnected,
     sessionInfoReceived,
@@ -44424,6 +44426,11 @@ function registerStatusTool(server, shared) {
           "AHC_TacticalMap loaded \u2014 " + BROADCAST_POLICY_KO + " \uC790\uB9C9/\uB9C8\uCEE4/\uC9C0\uB3C4 \uC5F4\uAE30\uB294 arma_tacmap_* \uC804\uC6A9 \uD234\uB85C, \uADF8 \uC678 \uAE30\uB2A5\uC740 AHC_TacticalMap_fnc_cheat<Name> \uCE74\uD0C8\uB85C\uADF8(docs/tacmap.md)\uB97C \uB530\uB974\uC138\uC694." + (tacmapZeusTool === false ? " AHC_ZeusTool \uBBF8\uC124\uCE58 \u2014 \uC790\uB9C9\uC740 \uC815\uC0C1 \uD45C\uC2DC\uB418\uACE0 \uBB34\uC804 \uC0AC\uC6B4\uB4DC\uB9CC \uBE60\uC9D1\uB2C8\uB2E4." : "")
         );
       }
+      if (connected && snap.editor === true) {
+        hints.push(
+          "Eden \uC5D0\uB514\uD130\uC5D0 \uC5F0\uACB0\uB428 \u2014 \uC7A5\uBA74 \uC77D\uAE30\uB294 arma_eden_scene, \uC790\uC0B0 \uD328\uB110\uC5D0\uC11C \uCC3E\uAE30\uB294 arma_eden_find, \uD654\uBA74 \uD655\uC778\uC740 arma_eden_look, \uBC30\uCE58\uC640 \uD3B8\uC9D1\uC740 arma_eden_place, arma_eden_edit \uB97C \uC4F0\uC138\uC694. Zeus \uD234\uC740 \uC5D0\uB514\uD130\uC5D0\uC11C \uC4F0\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. arma_exec \uB294 mode=server \uB9CC \uB429\uB2C8\uB2E4. \uBC14\uB010 \uB0B4\uC6A9\uC740 \uC0AC\uC6A9\uC790\uAC00 \uC800\uC7A5\uD558\uAE30 \uC804\uAE4C\uC9C0 \uD30C\uC77C\uC5D0 \uC4F0\uC774\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+        );
+      }
       const dllVersion = deps.telemetry.dllVersion();
       const dllRelease = dllVersion.replace(/^ArmaMCP\s+/i, "").trim();
       const minorOf = (v) => v.split(".").slice(0, 2).join(".");
@@ -44486,7 +44493,8 @@ function registerStatusTool(server, shared) {
         tacmap,
         tacmapZeusTool,
         hints,
-        mission: connected ? { world: snap.world, mission: snap.mission } : null,
+        // editor: Eden 에디터 브리지면 true, 미션이면 false, 구버전 PBO 면 null.
+        mission: connected ? { world: snap.world, mission: snap.mission, editor: snap.editor ?? null } : null,
         // 최근 텔레메트리의 게임 시간과 창 상태. SP 는 paused 면 missionTime 이 멈추고
         // sleep 과 waitUntil 도 멈춘다. 브리지 링크는 그대로 산다.
         game: connected && snap.receivedAt > 0 ? {
@@ -48379,6 +48387,14 @@ function joinNotes2(notes) {
 function machineLabel(m, reported) {
   return reported ?? (m.mode === "server" ? "server" : m.target ?? "?");
 }
+function editorRefusal(deps) {
+  if (deps.telemetry.current().editor !== true) return null;
+  return {
+    ok: false,
+    error: "\uC9C0\uAE08 \uC5F0\uACB0\uC740 Eden \uC5D0\uB514\uD130\uC785\uB2C8\uB2E4. Zeus \uD234\uC740 \uBBF8\uC158 \uC911 Zeus \uC5D0\uC11C \uC501\uB2C8\uB2E4.",
+    hint: "\uC5D0\uB514\uD130 \uC790\uC0B0 \uD328\uB110\uC5D0\uC11C \uCC3E\uAE30\uB294 arma_eden_find, \uBC30\uCE58\uB294 arma_eden_place \uB97C \uC4F0\uC138\uC694."
+  };
+}
 function waitOrAbort(ms, signal) {
   return new Promise((resolve) => {
     if (signal.aborted) return resolve(false);
@@ -48411,6 +48427,8 @@ async function runZeusFind(deps, args, signal) {
   }
   const limit = clamp4(Math.trunc(args.limit ?? DEFAULT_LIMIT), 1, MAX_LIMIT);
   if (!deps.gateway.isConnected()) return { ok: false, error: "game not connected" };
+  const inEditor = editorRefusal(deps);
+  if (inEditor) return { ...inEditor, source };
   const ctx = makeSessionExecContext(deps, void 0, signal);
   const picked = await pickZeusMachine(
     deps,
@@ -48482,6 +48500,8 @@ async function runZeusModule(deps, args, signal) {
   const target = (args.target ?? "").trim();
   const observeMs = clamp4(Math.trunc(args.observeMs ?? DEFAULT_OBSERVE_MS), 0, MAX_OBSERVE_MS);
   if (!deps.gateway.isConnected()) return { ok: false, error: "game not connected" };
+  const inEditor = editorRefusal(deps);
+  if (inEditor) return inEditor;
   const ctx = makeSessionExecContext(deps, void 0, signal);
   const picked = await pickZeusMachine(deps, args.on, "module", ctx);
   if (!picked.ok) return { ...picked };
@@ -48624,7 +48644,7 @@ function registerZeusTools(server, shared) {
     "arma_zeus_find",
     {
       title: "Zeus \uC774\uB984\uC73C\uB85C \uB300\uC0C1 \uCC3E\uAE30",
-      description: `\uC0AC\uC6A9\uC790\uAC00 \uB300\uC0C1\uC744 Zeus \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uC774\uB984(\uC720\uB2DB \uC885\uB958\uBA85, \uD50C\uB808\uC774\uC5B4 \uC774\uB984, \uADF8\uB8F9 \uCF5C\uC0AC\uC778, \uCC28\uB7C9, \uBAA8\uB4C8, \uB9C8\uCEE4, \uC5D0\uB514\uD130 \uBCC0\uC218\uBA85)\uC774\uB098 "Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83"\uC73C\uB85C \uB9D0\uD558\uBA74 arma_exec \uC804\uC5D0 \uC774 \uD234\uB85C \uCC3E\uB294\uB2E4. \uACB0\uACFC\uC758 sqf \uC2DD(\uC608: ("2:345" call BIS_fnc_objectFromNetId))\uC744 arma_exec \uCF54\uB4DC\uC5D0 \uADF8\uB300\uB85C \uB123\uC5B4 \uC4F4\uB2E4. source='mission' \uC740 \uB9F5\uC5D0 \uC788\uB294 \uAC83, 'selected' \uB294 \uC9C0\uAE08 Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83, 'palette' \uB294 Zeus \uC0DD\uC131 \uD328\uB110(\uC720\uB2DB \uC885\uB958, \uCC28\uB7C9, \uBAA8\uB4C8, \uADF8\uB8F9 \uD3B8\uC131)\uC774\uB2E4. \uC774\uB984\uC740 Zeus \uB97C \uC4F0\uB294 \uD50C\uB808\uC774\uC5B4 \uBA38\uC2E0\uC758 \uC5B8\uC5B4\uB85C \uACC4\uC0B0\uD55C\uB2E4. \uAC19\uC740 \uC774\uB984\uC774 \uC5EC\uB7FF\uC774\uBA74 score, dist, grid \uB85C \uACE0\uB974\uAC70\uB098 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBB3B\uB294\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.`,
+      description: `\uC0AC\uC6A9\uC790\uAC00 \uB300\uC0C1\uC744 Zeus \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uC774\uB984(\uC720\uB2DB \uC885\uB958\uBA85, \uD50C\uB808\uC774\uC5B4 \uC774\uB984, \uADF8\uB8F9 \uCF5C\uC0AC\uC778, \uCC28\uB7C9, \uBAA8\uB4C8, \uB9C8\uCEE4, \uC5D0\uB514\uD130 \uBCC0\uC218\uBA85)\uC774\uB098 "Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83"\uC73C\uB85C \uB9D0\uD558\uBA74 arma_exec \uC804\uC5D0 \uC774 \uD234\uB85C \uCC3E\uB294\uB2E4. \uACB0\uACFC\uC758 sqf \uC2DD(\uC608: ("2:345" call BIS_fnc_objectFromNetId))\uC744 arma_exec \uCF54\uB4DC\uC5D0 \uADF8\uB300\uB85C \uB123\uC5B4 \uC4F4\uB2E4. source='mission' \uC740 \uB9F5\uC5D0 \uC788\uB294 \uAC83, 'selected' \uB294 \uC9C0\uAE08 Zeus \uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83, 'palette' \uB294 Zeus \uC0DD\uC131 \uD328\uB110(\uC720\uB2DB \uC885\uB958, \uCC28\uB7C9, \uBAA8\uB4C8, \uADF8\uB8F9 \uD3B8\uC131)\uC774\uB2E4. Eden \uC5D0\uB514\uD130\uC5D0\uC11C\uB294 \uC4F0\uC9C0 \uC54A\uACE0 arma_eden_find \uB97C \uC4F4\uB2E4. \uC774\uB984\uC740 Zeus \uB97C \uC4F0\uB294 \uD50C\uB808\uC774\uC5B4 \uBA38\uC2E0\uC758 \uC5B8\uC5B4\uB85C \uACC4\uC0B0\uD55C\uB2E4. \uAC19\uC740 \uC774\uB984\uC774 \uC5EC\uB7FF\uC774\uBA74 score, dist, grid \uB85C \uACE0\uB974\uAC70\uB098 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBB3B\uB294\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.`,
       inputSchema: {
         stack: STACK_INPUT,
         source: external_exports.enum(["mission", "selected", "palette"]).optional().describe("\uAE30\uBCF8 'mission'. 'selected' \uB294 Zeus \uBA38\uC2E0\uC758 curatorSelected, 'palette' \uB294 Zeus \uC0DD\uC131 \uBAA9\uB85D."),
@@ -48674,6 +48694,1166 @@ function registerZeusTools(server, shared) {
   );
 }
 
+// src/eden/edenSqf.ts
+var GEOM = [
+  "cx",
+  "cy",
+  "cz",
+  "dir",
+  "hx",
+  "hy",
+  "hz",
+  "bottom",
+  "gapMin",
+  "gapMax",
+  "tilt",
+  "attrZ"
+];
+var RF = { water: 1, box: 2, selected: 4, target: 8 };
+var SCENE_KINDS = ["unit", "vehicle", "object", "logic", "trigger", "marker"];
+var NEIGHBOR_MAX = 12;
+var GUARD = 'if (!is3DEN) exitWith {["NOEDEN"]};';
+var ATTR = 'private _attr = {params ["_e","_n","_d"]; private _v = (_e get3DENAttribute _n) param [0, _d]; if (isNil "_v") then {_d} else {_v}};';
+var KIND_OF = 'private _kindOf = {params ["_e"]; if (_e isEqualType "") exitWith {"marker"}; if (_e isKindOf "EmptyDetector") exitWith {"trigger"}; if (_e isKindOf "Logic") exitWith {"logic"}; if (_e isKindOf "CAManBase") exitWith {"unit"}; if (_e isKindOf "AllVehicles") exitWith {"vehicle"}; "object"};';
+var LAYER_MAP = 'private _lm = createHashMap; {private _ln = [_x, "name", ""] call _attr; if !(_ln isEqualType "") then {_ln = ""}; {if (_x isEqualType grpNull) then {{_lm set [get3DENEntityID _x, _ln]} forEach units _x} else {if !(_x isEqualType 0) then {_lm set [get3DENEntityID _x, _ln]}}} forEach (get3DENLayerEntities _x)} forEach (all3DENEntities select 6);';
+var POS_OF = 'private _posOf = {params ["_e","_k"]; if (_k == "marker") then {private _p = [_e, "position", [0,0,0]] call _attr; [_p select 0, _p select 1, getTerrainHeightASL _p]} else {getPosASL _e}};';
+var MEASURE = 'private _meas = {params ["_e"]; private _bb = boundingBoxReal _e; private _mn = _bb select 0; private _mx = _bb select 1; private _c = _e modelToWorldWorld [((_mn select 0) + (_mx select 0)) / 2, ((_mn select 1) + (_mx select 1)) / 2, ((_mn select 2) + (_mx select 2)) / 2]; private _h = [((_mx select 0) - (_mn select 0)) / 2, ((_mx select 1) - (_mn select 1)) / 2, ((_mx select 2) - (_mn select 2)) / 2]; private _top = (_c select 2) + (_h select 2) + 0.05; private _cs = [[_mn select 0, _mn select 1], [_mn select 0, _mx select 1], [_mx select 0, _mn select 1], [_mx select 0, _mx select 1]] apply {_e modelToWorldWorld [_x select 0, _x select 1, _mn select 2]}; private _gs = _cs apply {private _hs = lineIntersectsSurfaces [[_x select 0, _x select 1, _top], [_x select 0, _x select 1, (_x select 2) - 100], _e, objNull, true, 1, "GEOM", "NONE"]; private _g = getTerrainHeightASL _x; if (_hs isNotEqualTo []) then {_g = _g max (((_hs select 0) select 0) select 2)}; (_x select 2) - _g}; [_c, _h, selectMin (_cs apply {_x select 2}), selectMin _gs, selectMax _gs]};';
+var GEOM_STR = 'private _gstr = {params ["_a"]; (_a apply {_x toFixed 2}) joinString ","};';
+var ROW_OF = `private _row = {params ["_e","_k","_fl"]; private _id = get3DENEntityID _e; private _ly = _lm getOrDefault [_id, ""]; if (_k == "marker") exitWith {private _p = [_e, "position", [0,0,0]] call _attr; private _r = [_e, "rotation", 0] call _attr; if (_r isEqualType []) then {_r = _r param [2, 0]}; private _t = getTerrainHeightASL _p; [_id, _k, [_e, "itemClass", ""] call _attr, _e, _ly, [[_p select 0, _p select 1, _t, _r, 0, 0, 0, _t, 0, 0, 0, _p param [2, 0]]] call _gstr, _fl]}; private _nm = [_e, "name", ""] call _attr; if !(_nm isEqualType "") then {_nm = ""}; private _az = ([_e, "position", [0,0,0]] call _attr) param [2, 0]; private _w = ${RF.water} * (parseNumber (surfaceIsWater getPosASL _e)); if (_k in ["trigger","logic"]) exitWith {private _p = getPosASL _e; [_id, _k, typeOf _e, _nm, _ly, [[_p select 0, _p select 1, _p select 2, getDir _e, 0, 0, 0, _p select 2, 0, 0, 0, _az]] call _gstr, _fl + _w]}; ([_e] call _meas) params ["_c","_h","_bz","_g0","_g1"]; [_id, _k, typeOf _e, _nm, _ly, [[_c select 0, _c select 1, _c select 2, getDir _e, _h select 0, _h select 1, _h select 2, _bz, _g0, _g1, acos (((vectorUp _e) select 2) min 1), _az]] call _gstr, _fl + _w + ${RF.box}]};`;
+var ROW_MAP = `private _rowMap = {params ["_e"]; private _cl = typeOf _e; if (_cl == "") then {_cl = (getModelInfo _e) select 0}; ([_e] call _meas) params ["_c","_h","_bz","_g0","_g1"]; [0, "map", _cl, "", "", [[_c select 0, _c select 1, _c select 2, getDir _e, _h select 0, _h select 1, _h select 2, _bz, _g0, _g1, acos (((vectorUp _e) select 2) min 1), 0]] call _gstr, ${RF.box}]};`;
+var PRELUDE = [CUT, ATTR, KIND_OF, LAYER_MAP, POS_OF, MEASURE, GEOM_STR, ROW_OF, ROW_MAP].join(" ");
+function paginateRows(keep) {
+  return `_rows = _rows apply {private _r = +_x; {if (_x isEqualType "" && {!(_forEachIndex in ${JSON.stringify(keep)})}) then {_r set [_forEachIndex, [_x, ${FIELD_MAX}] call _cut]}} forEach _r; _r}; private _pages = []; private _pg = []; private _len = 2; {private _s = (count str _x) + 1; if (_len + _s > ${PAGE_BUDGET} && {count _pg > 0}) then {_pages pushBack _pg; _pg = []; _len = 2}; _pg pushBack _x; _len = _len + _s} forEach _rows; if (count _pg > 0 || {_pages isEqualTo []}) then {_pages pushBack _pg};`;
+}
+function neighbors(extra) {
+  return `private _nb = []; private _nm2 = []; {private _t = _x; private _r = ((boundingBoxReal _t) select 2) + ${sqfNumber(extra)}; {if (!(_x in _T) && {!(_x in _nb)}) then {_nb pushBack _x}} forEach ((all3DENEntities select 0) select {(_x distance2D _t) <= _r}); {if (!(_x in _nm2)) then {_nm2 pushBack _x}} forEach (nearestTerrainObjects [getPosASL _t, [], _r, true, true]); } forEach (_T select {_x isEqualType objNull}); _nb = _nb select [0, ${NEIGHBOR_MAX}]; _nm2 = _nm2 select [0, ${NEIGHBOR_MAX} - count _nb]; {_rows pushBack ([_x, [_x] call _kindOf, 0] call _row)} forEach _nb; {_rows pushBack ([_x] call _rowMap)} forEach _nm2;`;
+}
+function finish(key, meta3) {
+  return [
+    paginateRows([2, 5]),
+    storePages(key),
+    `_out = [count _rows, count _pages, _pages select 0, ${meta3}];`
+  ].join(" ");
+}
+function buildSceneSqf(a) {
+  const near = a.near ? `[${sqfNumber(a.near[0])},${sqfNumber(a.near[1])}]` : "[]";
+  return [
+    GUARD,
+    "private _out = [];",
+    "isNil {",
+    PRELUDE,
+    `private _ids = [${a.ids.map((n) => sqfNumber(Math.trunc(n))).join(",")}]; private _K = ${sqfStringArray(a.kinds)}; `,
+    `private _q = toLower ${sqfString(a.query.trim())}; private _L = toLower ${sqfString(a.layer.trim())}; `,
+    `private _np = ${near}; private _rad = ${sqfNumber(a.radius)}; private _lim = ${Math.trunc(a.limit)};`,
+    'private _S = (get3DENSelected "object") + (get3DENSelected "trigger") + (get3DENSelected "logic") + (get3DENSelected "marker");',
+    'all3DENEntities params ["_objs","_grps","_trgs","_logs","_wps","_mks"];',
+    `private _src = ${a.selected ? "_S" : "_objs + _trgs + _logs + _mks"};`,
+    "private _cand = [];",
+    '{private _e = _x; private _k = [_e] call _kindOf; private _id = get3DENEntityID _e; if ((_ids isEqualTo [] || {_id in _ids}) && {_K isEqualTo [] || {_k in _K}}) then {private _p = [_e, _k] call _posOf; private _d = if (count _np > 1) then {_p distance2D _np} else {-1}; if (_d <= _rad) then {private _ly = _lm getOrDefault [_id, ""]; if (_L isEqualTo "" || {(toLower _ly) isEqualTo _L}) then {private _ok = _q isEqualTo ""; if (!_ok) then {private _cl = if (_k == "marker") then {[_e, "itemClass", ""] call _attr} else {typeOf _e}; private _nm = if (_k == "marker") then {_e} else {[_e, "name", ""] call _attr}; if !(_nm isEqualType "") then {_nm = ""}; private _dn = if (_k == "marker") then {""} else {getText (configOf _e >> "displayName")}; _ok = (toLower ([_cl, _nm, _ly, _dn] joinString " ")) find _q >= 0}; if (_ok) then {_cand pushBack [[_d, _id] select (_d < 0), _id, _e, _k]}}}}} forEach _src;',
+    "_cand sort true; private _total = count _cand;",
+    `private _rows = (_cand select [0, _lim]) apply {[_x select 2, _x select 3, ${RF.selected} * (parseNumber ((_x select 2) in _S))] call _row};`,
+    finish(a.key, "[_total, count _S]"),
+    "};",
+    "_out"
+  ].join(" ");
+}
+function buildClassSqf(a) {
+  const list = "[" + a.classes.map(([c, m]) => `[${sqfString(c)},${sqfString(m)}]`).join(",") + "]";
+  return [
+    GUARD,
+    "private _out = [];",
+    "isNil {",
+    CUT,
+    GEOM_STR,
+    "private _rows = [];",
+    `{_x params ["_c","_m"]; private _cfg = configFile >> (["CfgVehicles","CfgMarkers"] select (_m == "Marker"));if (!isClass (_cfg >> _c)) then {_rows pushBack [_c, 0, ""]} else {if (_m != "Object") then {_rows pushBack [_c, 2, ""]} else {private _o = createSimpleObject [_c, [0, 0, 2000], true]; if (isNull _o) then {_rows pushBack [_c, 2, ""]} else {private _bb = boundingBoxReal _o; deleteVehicle _o; private _mn = _bb select 0; private _mx = _bb select 1; _rows pushBack [_c, 1, [[((_mx select 0) - (_mn select 0)) / 2, ((_mx select 1) - (_mn select 1)) / 2, ((_mx select 2) - (_mn select 2)) / 2]] call _gstr]}}}} forEach ` + list + ";",
+    paginateRows([0, 2]),
+    storePages(a.key),
+    "_out = [count _rows, count _pages, _pages select 0, []];",
+    "};",
+    "_out"
+  ].join(" ");
+}
+function zArgs(z2) {
+  switch (z2.kind) {
+    case "ground":
+      return '"ground",0';
+    case "on":
+      return `"on",${sqfNumber(Math.trunc(z2.ref))}`;
+    case "asl":
+      return `"asl",${sqfNumber(z2.z)}`;
+    case "attr":
+      return `"attr",${sqfNumber(z2.z)}`;
+    case "keep":
+      return '"keep",0';
+  }
+}
+var SETTLE = 'private _settle = {params ["_e","_k","_zk","_zv"]; if (_zk == "keep" || {!(_e isEqualType objNull)} || {_k in ["trigger","logic"]}) exitWith {}; private _p = [_e, "position", getPosATL _e] call _attr; if (_zk == "attr") exitWith {_e set3DENAttribute ["position", [_p select 0, _p select 1, _zv]]}; if (_zk == "ground" && {_k == "unit"}) exitWith {}; ([_e] call _meas) params ["_c","_h","_bz","_g0","_g1"]; private _dz = 0; if (_zk == "ground") then {_dz = 0 - _g0}; if (_zk == "asl") then {_dz = _zv - _bz}; if (_zk == "on") then {private _r = get3DENEntity _zv; if (!isNull _r) then {([_r] call _meas) params ["_rc","_rh"]; private _rt = (_rc select 2) + (_rh select 2); private _hs = lineIntersectsSurfaces [[_c select 0, _c select 1, _rt + 1], [_c select 0, _c select 1, (_rc select 2) - (_rh select 2) - 1], _e, objNull, true, 10, "GEOM", "NONE"]; private _i = _hs findIf {((_x select 2) isEqualTo _r) || {(_x select 3) isEqualTo _r}}; private _sz = if (_i >= 0) then {((_hs select _i) select 0) select 2} else {_rt}; _dz = _sz - _bz}}; if (abs _dz > 0.001) then {_e set3DENAttribute ["position", [_p select 0, _p select 1, (_p select 2) + _dz]]}};';
+var CENTER = 'private _center = {params ["_e","_k","_w"]; if (count _w < 2 || {!(_e isEqualType objNull)} || {_k in ["trigger","logic"]}) exitWith {}; private _p = [_e, "position", getPosATL _e] call _attr; ([_e] call _meas) params ["_c"]; private _dx = (_w select 0) - (_c select 0); private _dy = (_w select 1) - (_c select 1); if (abs _dx > 0.001 || {abs _dy > 0.001}) then {_e set3DENAttribute ["position", [(_p select 0) + _dx, (_p select 1) + _dy, _p select 2]]}};';
+var ROTATE = 'private _rot = {params ["_e","_k","_d"]; if (_k == "marker") then {_e set3DENAttribute ["rotation", _d]} else {private _r = [_e, "rotation", [0,0,0]] call _attr; if !(_r isEqualType []) then {_r = [0,0,0]}; _e set3DENAttribute ["rotation", [_r param [0, 0], _r param [1, 0], _d]]}};';
+function buildPlaceSqf(a) {
+  const items = "[" + a.items.map(
+    (it) => `[${sqfString(it.mode)},${sqfString(it.class)},[${sqfNumber(it.pos[0])},${sqfNumber(it.pos[1])}],${sqfNumber(it.dir)},${zArgs(it.z)},${sqfString(it.name)}]`
+  ).join(",") + "]";
+  return [
+    GUARD,
+    "private _out = [];",
+    "isNil {",
+    PRELUDE,
+    SETTLE,
+    CENTER,
+    ROTATE,
+    "private _new = []; private _bad = [];",
+    'collect3DENHistory {{_x params ["_m","_c","_xy","_d","_zk","_zv","_nm"]; private _e = create3DENEntity [_m, _c, [_xy select 0, _xy select 1, 0], true]; if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""}) then {_bad pushBack _forEachIndex} else {private _k = [_e] call _kindOf; [_e, _k, _d] call _rot; if (_nm != "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; _new pushBack [_e, _k, _zk, _zv, _xy]}} forEach ' + items + '; {_x params ["_e","_k","_zk","_zv","_w"]; [_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle} forEach _new;};',
+    a.select ? "set3DENSelected (_new apply {_x select 0});" : "",
+    "private _T = _new apply {_x select 0};",
+    `private _rows = _new apply {[_x select 0, _x select 1, ${RF.target}] call _row};`,
+    a.neighborRadius > 0 ? neighbors(a.neighborRadius) : "",
+    finish(a.key, "[count _new, _bad]"),
+    "};",
+    "_out"
+  ].join(" ");
+}
+function buildEditSqf(a) {
+  const ops = "[" + a.ops.map((o) => {
+    const pos = o.pos ? `[${sqfNumber(o.pos[0])},${sqfNumber(o.pos[1])}]` : "[]";
+    const dir = o.dir === null ? "-1" : sqfNumber(o.dir);
+    const name = o.name === null ? "0" : sqfString(o.name);
+    return `[${sqfNumber(Math.trunc(o.id))},${pos},${dir},${zArgs(o.z)},${name},${o.delete ? "true" : "false"}]`;
+  }).join(",") + "]";
+  return [
+    GUARD,
+    "private _out = [];",
+    "isNil {",
+    PRELUDE,
+    SETTLE,
+    CENTER,
+    ROTATE,
+    "private _ed = []; private _del = []; private _miss = [];",
+    'collect3DENHistory {{_x params ["_id","_xy","_d","_zk","_zv","_nm","_rm"]; private _e = get3DENEntity _id; if (isNil "_e" || {_e isEqualTo objNull} || {_e isEqualTo ""} || {(get3DENEntityID _e) != _id}) then {_miss pushBack _id} else {if (_rm) then {_del pushBack _e} else {private _k = [_e] call _kindOf; if (count _xy > 1) then {private _p = [_e, "position", if (_k == "marker") then {[0,0,0]} else {getPosATL _e}] call _attr; _e set3DENAttribute ["position", [_xy select 0, _xy select 1, _p param [2, 0]]]}; if (_d >= 0) then {[_e, _k, _d] call _rot}; if (_nm isEqualType "" && {_k != "marker"}) then {_e set3DENAttribute ["name", _nm]}; _ed pushBack [_e, _k, _zk, _zv, _xy]}}} forEach ' + ops + '; {_x params ["_e","_k","_zk","_zv","_w"]; [_e, _k, _w] call _center; [_e, _k, _zk, _zv] call _settle} forEach _ed; if (_del isNotEqualTo []) then {delete3DENEntities _del};};',
+    "private _T = _ed apply {_x select 0};",
+    `private _rows = _ed apply {[_x select 0, _x select 1, ${RF.target}] call _row};`,
+    a.neighborRadius > 0 ? neighbors(a.neighborRadius) : "",
+    finish(a.key, "[count _ed, count _del, _miss]"),
+    "};",
+    "_out"
+  ].join(" ");
+}
+function buildUndoSqf(n) {
+  const k = Math.max(1, Math.min(50, Math.trunc(n)));
+  return `${GUARD} for "_i" from 1 to ${k} do {do3DENAction "Undo"}; ["OK", ${k}]`;
+}
+var ASSET_KINDS = ["unit", "vehicle", "object", "module", "group", "marker"];
+var AF = { is3DEN: 1, zeus: 2 };
+var ASSET_INDEX = `private _ea = uiNamespace getVariable ["AHC_MCP_ea", []]; if (_ea isEqualTo []) then {private _sn = ["EAST","WEST","GUER","CIV"]; private _dn = {params ["_cfg","_n"]; if (_n == "") exitWith {""}; getText (configFile >> _cfg >> _n >> "displayName")}; {private _c = _x; private _cl = configName _c; private _kd = if (_cl isKindOf "Logic") then {"module"} else {if (_cl isKindOf "CAManBase") then {"unit"} else {if (_cl isKindOf "AllVehicles") then {"vehicle"} else {"object"}}}; private _sub = ["CfgEditorSubcategories", getText (_c >> "editorSubcategory")] call _dn; private _pa = if (_kd == "module") then {["CfgFactionClasses", getText (_c >> "category")] call _dn} else {private _top = if (_kd == "object") then {["CfgEditorCategories", getText (_c >> "editorCategory")] call _dn} else {["CfgFactionClasses", getText (_c >> "faction")] call _dn}; if (_sub == "") then {_top} else {_top + " > " + _sub}}; private _sx = if (_kd in ["unit","vehicle"]) then {_sn param [getNumber (_c >> "side"), ""]} else {["", "EMPTY"] select (_kd == "object")}; _ea pushBack [_kd, _cl, getText (_c >> "displayName"), _pa, _sx, ${AF.is3DEN} * (parseNumber (getNumber (_c >> "is3DEN") > 0)) + ${AF.zeus} * (parseNumber (getNumber (_c >> "scopeCurator") == 2))]} forEach ("getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgVehicles")); {private _sdc = _x; {private _fc = _x; {private _ca = _x; {_ea pushBack ["group", format ["%1|%2|%3|%4", configName _sdc, configName _fc, configName _ca, configName _x], getText (_x >> "name"), getText (_fc >> "name") + " > " + getText (_ca >> "name"), _sn param [getNumber (_x >> "side"), ""], 0]} forEach ("true" configClasses _ca)} forEach ("true" configClasses _fc)} forEach ("true" configClasses _sdc)} forEach ("true" configClasses (configFile >> "CfgGroups")); {_ea pushBack ["marker", configName _x, getText (_x >> "name"), getText (configFile >> "CfgMarkerClasses" >> getText (_x >> "markerClass") >> "displayName"), "", 0]} forEach ("getNumber (_x >> ""scope"") == 2" configClasses (configFile >> "CfgMarkers")); uiNamespace setVariable ["AHC_MCP_ea", _ea]};`;
+function buildAssetsSqf(a) {
+  return [
+    GUARD,
+    queryPrelude(a.query),
+    `private _K = ${sqfStringArray(a.kinds)}; private _sd = ${sqfString(a.side)}; private _lim = ${Math.trunc(a.limit)};`,
+    CUT,
+    SCORE,
+    "private _out = [];",
+    "isNil {",
+    ASSET_INDEX,
+    'private _rows = []; {_x params ["_kd","_cl","_lb","_pa","_sx"]; if ((count _K == 0 || {_kd in _K}) && {_sd == "" || {_sx == _sd}}) then {private _s = [[_lb, _cl, _pa]] call _sc; if (_s > 0) then {_rows pushBack (_x + [_s])}}} forEach _ea;',
+    sortAndLimit(6, -1),
+    paginate([3], 2),
+    storePages(a.key),
+    "_out = [_total, count _pages, _pages select 0, [language, count _ea]];",
+    "};",
+    "_out"
+  ].join(" ");
+}
+function buildCameraSqf(pos, dir, up) {
+  const v = (a) => "[" + a.map((n) => sqfNumber(n)).join(",") + "]";
+  return `${GUARD} private _c = get3DENCamera; if (isNull _c) exitWith {["NOCAM"]}; if (isNil "AHC_MCP_edenCam") then {AHC_MCP_edenCam = [getPosASL _c, vectorDir _c, vectorUp _c]}; _c setPosASL ${v(pos)}; _c setVectorDirAndUp [${v(dir)}, ${v(up)}]; ["OK"]`;
+}
+function buildCameraRestoreSqf() {
+  return `${GUARD} private _c = get3DENCamera; if (isNull _c || {isNil "AHC_MCP_edenCam"}) exitWith {["NONE"]}; AHC_MCP_edenCam params ["_p","_d","_u"]; _c setPosASL _p; _c setVectorDirAndUp [_d, _u]; AHC_MCP_edenCam = nil; ["OK"]`;
+}
+function buildProjectSqf(points) {
+  const list = "[" + points.map((p) => `[${sqfNumber(Math.trunc(p.id))},[${p.pos.map((n) => sqfNumber(n)).join(",")}]]`).join(",") + "]";
+  return `${GUARD} ["OK", ${list} apply {_x params ["_id","_p"]; private _s = worldToScreen (ASLToAGL _p); if (_s isEqualTo []) then {[_id, "", ""]} else {[_id, (((_s select 0) - safeZoneX) / safeZoneW) toFixed 3, (((_s select 1) - safeZoneY) / safeZoneH) toFixed 3]}}]`;
+}
+function buildTerrainSqf(x, y) {
+  return `${GUARD} ["OK", (getTerrainHeightASL [${sqfNumber(x)},${sqfNumber(y)}]) toFixed 2]`;
+}
+
+// src/eden/edenGeom.ts
+var CONTACT_TOL = 0.05;
+var RAD = Math.PI / 180;
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+function norm360(d) {
+  const r = d % 360;
+  return r < 0 ? r + 360 : r;
+}
+function axes(dir) {
+  const a = dir * RAD;
+  return { right: [Math.cos(a), -Math.sin(a)], fwd: [Math.sin(a), Math.cos(a)] };
+}
+function bearing(from, to) {
+  const dx = (to[0] ?? 0) - (from[0] ?? 0);
+  const dy = (to[1] ?? 0) - (from[1] ?? 0);
+  return round2(norm360(Math.atan2(dx, dy) / RAD));
+}
+function groundVerdict(b, tol = CONTACT_TOL) {
+  const gap = round2(b.gapMin);
+  const spread = round2(b.gapMax - b.gapMin);
+  if (gap > tol) return { state: "floating", gap, spread };
+  if (gap < -tol) return { state: "sunk", gap, spread };
+  return { state: "ground", gap, spread };
+}
+function projectHalf(half, dir, axis) {
+  const { right, fwd } = axes(dir);
+  const ax = axis[0] ?? 0;
+  const ay = axis[1] ?? 0;
+  return Math.abs((half[0] ?? 0) * (right[0] * ax + right[1] * ay)) + Math.abs((half[1] ?? 0) * (fwd[0] * ax + fwd[1] * ay));
+}
+function overlap2D(a, b) {
+  const d = [b.center[0] - a.center[0], b.center[1] - a.center[1]];
+  const ax = axes(a.dir);
+  const bx = axes(b.dir);
+  let depth = Infinity;
+  for (const axis of [ax.right, ax.fwd, bx.right, bx.fwd]) {
+    const dist = Math.abs((d[0] ?? 0) * axis[0] + (d[1] ?? 0) * axis[1]);
+    const pen = projectHalf(a.half, a.dir, axis) + projectHalf(b.half, b.dir, axis) - dist;
+    if (pen <= 0) return 0;
+    depth = Math.min(depth, pen);
+  }
+  return depth;
+}
+function overlapZ(a, b) {
+  const lo = Math.max(a.center[2] - a.half[2], b.center[2] - b.half[2]);
+  const hi = Math.min(a.center[2] + a.half[2], b.center[2] + b.half[2]);
+  return Math.max(0, hi - lo);
+}
+function findOverlaps(targets, others = [], tol = CONTACT_TOL) {
+  const out2 = [];
+  const boxed = targets.filter((t) => t.hasBox);
+  const check2 = (a, b) => {
+    if (!b.hasBox || a === b) return;
+    if (overlapZ(a, b) <= tol) return;
+    const depth = overlap2D(a, b);
+    if (depth <= tol) return;
+    out2.push({ a: a.id, b: b.id, ...b.kind === "map" ? { bClass: b.class } : {}, depth: round2(depth) });
+  };
+  for (let i = 0; i < boxed.length; i++) {
+    for (let j = i + 1; j < boxed.length; j++) check2(boxed[i], boxed[j]);
+  }
+  const ids = new Set(boxed.map((t) => t.id));
+  for (const a of boxed) {
+    for (const b of others) {
+      if (b.kind !== "map" && ids.has(b.id)) continue;
+      check2(a, b);
+    }
+  }
+  return out2;
+}
+function besidePos(ref, side, half, dir, gap = 0, offset = 0) {
+  const { right, fwd } = axes(ref.dir);
+  const neg = (v) => [-v[0], -v[1]];
+  const axis = side === "front" ? fwd : side === "back" ? neg(fwd) : side === "right" ? right : neg(right);
+  const lateral = side === "front" || side === "back" ? right : fwd;
+  const dist = projectHalf(ref.half, ref.dir, axis) + projectHalf(half, dir, axis) + gap;
+  return [
+    round2(ref.center[0] + axis[0] * dist + lateral[0] * offset),
+    round2(ref.center[1] + axis[1] * dist + lateral[1] * offset)
+  ];
+}
+function localToWorld(ref, offset) {
+  const { right, fwd } = axes(ref.dir);
+  const r = offset[0] ?? 0;
+  const f = offset[1] ?? 0;
+  return [round2(ref.center[0] + right[0] * r + fwd[0] * f), round2(ref.center[1] + right[1] * r + fwd[1] * f)];
+}
+function frameOf(boxes) {
+  if (boxes.length === 0) return { center: [0, 0, 0], radius: 0 };
+  let lo = [Infinity, Infinity, Infinity];
+  let hi = [-Infinity, -Infinity, -Infinity];
+  for (const b of boxes) {
+    const r = Math.hypot(b.half[0], b.half[1]);
+    lo = [Math.min(lo[0], b.center[0] - r), Math.min(lo[1], b.center[1] - r), Math.min(lo[2], b.center[2] - b.half[2])];
+    hi = [Math.max(hi[0], b.center[0] + r), Math.max(hi[1], b.center[1] + r), Math.max(hi[2], b.center[2] + b.half[2])];
+  }
+  const center = [
+    round2((lo[0] + hi[0]) / 2),
+    round2((lo[1] + hi[1]) / 2),
+    round2((lo[2] + hi[2]) / 2)
+  ];
+  const radius = round2(Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) / 2);
+  return { center, radius };
+}
+function cameraFor(view, center, radius, facing = 180, fovDeg = 40, floorZ = -Infinity) {
+  const dist = round2(Math.max(3, Math.max(radius, 1) / Math.sin(fovDeg / 2 * RAD)));
+  const cx = center[0] ?? 0;
+  const cy = center[1] ?? 0;
+  const cz = center[2] ?? 0;
+  if (view === "top") {
+    return { view, pos: [cx, cy, round2(cz + dist)], vectorDir: [0, 0, -1], vectorUp: [0, 1, 0], distance: dist };
+  }
+  const from = view === "front" ? facing : view === "side" ? facing + 90 : facing + 45;
+  const elev = (view === "iso" ? 35 : 10) * RAD;
+  const { fwd } = axes(from);
+  const horiz = dist * Math.cos(elev);
+  let pos = [cx + fwd[0] * horiz, cy + fwd[1] * horiz, cz + dist * Math.sin(elev)];
+  if (pos[2] < floorZ) pos = [pos[0], pos[1], floorZ];
+  const d = [cx - pos[0], cy - pos[1], cz - pos[2]];
+  const len = Math.hypot(d[0], d[1], d[2]) || 1;
+  const vectorDir = [d[0] / len, d[1] / len, d[2] / len];
+  const h = Math.hypot(vectorDir[0], vectorDir[1]) || 1;
+  const s = -vectorDir[2];
+  const vectorUp = [
+    vectorDir[0] / h * s,
+    vectorDir[1] / h * s,
+    h
+  ];
+  const r6 = (v) => Math.round(v * 1e6) / 1e6;
+  return {
+    view,
+    pos: [round2(pos[0]), round2(pos[1]), round2(pos[2])],
+    vectorDir: vectorDir.map(r6),
+    vectorUp: vectorUp.map(r6),
+    distance: dist
+  };
+}
+
+// src/eden/edenRuntime.ts
+var KINDS = ["unit", "vehicle", "object", "logic", "trigger", "marker", "map"];
+var PLACE_TYPE = {
+  unit: "object",
+  vehicle: "object",
+  object: "object",
+  module: "logic",
+  marker: "marker"
+};
+function mapAssetRow(r) {
+  const [kind, cls, label, path44, side, flags, score] = r;
+  const k = typeof kind === "string" ? kind : "";
+  const c = typeof cls === "string" ? cls : "";
+  const f = typeof flags === "number" ? flags : 0;
+  const out2 = { kind: k, label: typeof label === "string" ? label : "" };
+  if (k === "group") {
+    out2.class = c.split("|").pop() ?? c;
+    out2.sqf = groupTemplateExpr(c);
+  } else {
+    out2.class = c;
+  }
+  if (typeof path44 === "string" && path44 !== "") out2.path = path44;
+  if (typeof side === "string" && side !== "") out2.side = side;
+  if (k === "module") {
+    out2.is3DEN = (f & AF.is3DEN) !== 0;
+    out2.zeus = (f & AF.zeus) !== 0;
+  }
+  const t = PLACE_TYPE[k];
+  if (t) out2.place = t === "object" ? { class: c } : { class: c, type: t };
+  if (typeof score === "number") out2.score = score;
+  return out2;
+}
+function mapRow(r) {
+  const [id, kind, cls, name, layer, geom, flags] = r;
+  if (typeof id !== "number" || typeof kind !== "string" || !KINDS.includes(kind) || typeof geom !== "string") {
+    return null;
+  }
+  const g = geom.split(",").map((s) => Number(s));
+  if (g.length !== GEOM.length || g.some((n) => !Number.isFinite(n))) return null;
+  const f = typeof flags === "number" ? flags : 0;
+  const [cx, cy, cz, dir, hx, hy, hz, bottom, gapMin, gapMax, tilt, attrZ] = g;
+  return {
+    box: {
+      id,
+      kind,
+      class: typeof cls === "string" ? cls : "",
+      name: typeof name === "string" ? name : "",
+      layer: typeof layer === "string" ? layer : "",
+      center: [cx, cy, cz],
+      dir,
+      half: [hx, hy, hz],
+      bottom,
+      gapMin,
+      gapMax,
+      tilt,
+      attrZ,
+      water: (f & RF.water) !== 0,
+      hasBox: (f & RF.box) !== 0
+    },
+    flags: { selected: (f & RF.selected) !== 0, target: (f & RF.target) !== 0 }
+  };
+}
+var SLOPE_SPREAD = 0.3;
+var TILT_SHOW = 1;
+function entityOut(b, flags) {
+  const out2 = { id: b.id, kind: b.kind, class: b.class };
+  if (b.name) out2.name = b.name;
+  if (b.layer) out2.layer = b.layer;
+  out2.at = [b.center[0], b.center[1]];
+  out2.dir = b.dir;
+  if (b.hasBox) {
+    out2.size = b.half.map((h) => Math.round(h * 200) / 100);
+    out2.z = { bottom: b.bottom, attr: b.attrZ };
+    const v = groundVerdict(b);
+    out2.ground = v.state === "ground" ? "ground" : `${v.state} ${v.gap}`;
+    if (v.spread >= SLOPE_SPREAD) out2.slope = v.spread;
+    if (b.tilt >= TILT_SHOW) out2.tilt = b.tilt;
+  } else {
+    out2.z = { attr: b.attrZ };
+  }
+  if (b.water) out2.water = true;
+  if (flags?.selected) out2.selected = true;
+  return out2;
+}
+function overlapsOut(pairs) {
+  return pairs.map((p) => ({ a: p.a, b: p.bClass !== void 0 ? `map:${p.bClass}` : p.b, depth: p.depth }));
+}
+function verdictNote(targets, overlaps) {
+  const floating = targets.filter((t) => t.hasBox && groundVerdict(t).state === "floating").map((t) => t.id);
+  const sunk = targets.filter((t) => t.hasBox && groundVerdict(t).state === "sunk").map((t) => t.id);
+  const parts = [];
+  if (floating.length > 0) parts.push(`\uB5A0 \uC788\uC74C: ${floating.join(", ")}`);
+  if (sunk.length > 0) parts.push(`\uBB3B\uD798(\uACBD\uC0AC\uBA74\uC758 \uAC74\uBB3C\uC774\uBA74 \uD754\uD558\uB2E4): ${sunk.join(", ")}`);
+  if (overlaps.length > 0) parts.push(`\uC0C1\uC790 \uACB9\uCE68 ${overlaps.length}\uC30D(overlaps). \uB098\uBB34\uC640 \uB364\uBD88\uC740 \uC9C0\uB098\uAC08 \uC218 \uC788\uC9C0\uB9CC \uAC74\uBB3C\uACFC \uCC28\uB7C9\uC740 \uC62E\uAE30\uC138\uC694`);
+  return parts.length > 0 ? parts.join(". ") + "." : void 0;
+}
+function judge(rows) {
+  const targets = [];
+  const neighbors2 = [];
+  const entities = [];
+  let bad = 0;
+  for (const r of rows) {
+    const m = mapRow(r);
+    if (!m) {
+      bad += 1;
+      continue;
+    }
+    if (m.flags.target) {
+      targets.push(m.box);
+      entities.push(entityOut(m.box, m.flags));
+    } else {
+      neighbors2.push(m.box);
+    }
+  }
+  return { targets, neighbors: neighbors2, entities, overlaps: overlapsOut(findOverlaps(targets, neighbors2)), bad };
+}
+var MODE_OF = {
+  object: "Object",
+  logic: "Logic",
+  trigger: "Trigger",
+  marker: "Marker"
+};
+function refIds(p) {
+  const ids = [];
+  if (typeof p.on === "number") ids.push(p.on);
+  if (p.beside) ids.push(p.beside.id);
+  if (typeof p.face === "number") ids.push(p.face);
+  if (typeof p.alignWith === "number") ids.push(p.alignWith);
+  return ids;
+}
+function norm3602(d) {
+  const r = d % 360;
+  return Math.round((r < 0 ? r + 360 : r) * 100) / 100;
+}
+function solvePlacement(p, refs, half, self) {
+  const ref = (id, what) => {
+    const b = refs.get(id);
+    if (!b) return `${what} \uC758 id ${id} \uB97C \uC5D0\uB514\uD130\uC5D0\uC11C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`;
+    return b;
+  };
+  const where = [p.at !== void 0, p.by !== void 0, p.on !== void 0, p.beside !== void 0].filter(Boolean).length;
+  if (where > 1) return { ok: false, error: "at, by, on, beside \uC911 \uD558\uB098\uB9CC \uC8FC\uC138\uC694." };
+  const turning = [p.dir !== void 0, p.turn !== void 0, p.face !== void 0, p.alignWith !== void 0].filter(Boolean).length;
+  if (turning > 1) return { ok: false, error: "dir, turn, face, alignWith \uC911 \uD558\uB098\uB9CC \uC8FC\uC138\uC694." };
+  let dir = null;
+  if (p.dir !== void 0) dir = norm3602(p.dir);
+  if (p.turn !== void 0) {
+    if (!self) return { ok: false, error: "turn \uC740 edit \uC5D0\uC11C\uB9CC \uC501\uB2C8\uB2E4." };
+    dir = norm3602(self.dir + p.turn);
+  }
+  if (p.alignWith !== void 0) {
+    const r = ref(p.alignWith, "alignWith");
+    if (typeof r === "string") return { ok: false, error: r };
+    dir = norm3602(r.dir);
+  }
+  if (p.beside && dir === null && p.face === void 0 && !self) {
+    const r = refs.get(p.beside.id);
+    if (r) dir = norm3602(r.dir);
+  }
+  const faceTarget = () => {
+    if (p.face === void 0) return null;
+    if (typeof p.face === "number") {
+      const r = ref(p.face, "face");
+      return typeof r === "string" ? r : [r.center[0], r.center[1]];
+    }
+    if (p.face.length < 2 || !p.face.every((n) => Number.isFinite(n))) return "face \uB294 id \uB098 [x, y] \uC785\uB2C8\uB2E4.";
+    return p.face;
+  };
+  const ft = faceTarget();
+  if (typeof ft === "string") return { ok: false, error: ft };
+  let pos = null;
+  let z2 = { kind: "keep" };
+  let how = "keep";
+  const useDir = () => dir ?? self?.dir ?? 0;
+  if (p.at !== void 0) {
+    if (p.at.length < 2 || !p.at.every((n) => Number.isFinite(n))) return { ok: false, error: "at \uC740 [x, y] \uB098 [x, y, z] \uC785\uB2C8\uB2E4." };
+    pos = [p.at[0], p.at[1]];
+    z2 = p.at.length >= 3 ? { kind: "asl", z: p.at[2] } : { kind: "ground" };
+    how = "at";
+  } else if (p.by !== void 0) {
+    if (!self) return { ok: false, error: "by \uB294 edit \uC5D0\uC11C\uB9CC \uC501\uB2C8\uB2E4." };
+    if (p.by.length < 2 || !p.by.every((n) => Number.isFinite(n))) return { ok: false, error: "by \uB294 [dx, dy] \uB098 [dx, dy, dz] \uC785\uB2C8\uB2E4." };
+    pos = [Math.round((self.center[0] + p.by[0]) * 100) / 100, Math.round((self.center[1] + p.by[1]) * 100) / 100];
+    z2 = p.by.length >= 3 && self.hasBox ? { kind: "asl", z: self.bottom + p.by[2] } : { kind: "ground" };
+    how = "by";
+  } else if (p.on !== void 0) {
+    const r = ref(p.on, "on");
+    if (typeof r === "string") return { ok: false, error: r };
+    if (!r.hasBox) return { ok: false, error: `on \uC758 id ${p.on} \uB294 \uC0C1\uC790\uAC00 \uC5C6\uB294 ${r.kind} \uC785\uB2C8\uB2E4.` };
+    pos = p.offset ? localToWorld(r, p.offset) : [r.center[0], r.center[1]];
+    z2 = { kind: "on", ref: r.id };
+    how = "on";
+  } else if (p.beside !== void 0) {
+    const r = ref(p.beside.id, "beside");
+    if (typeof r === "string") return { ok: false, error: r };
+    let d = useDir();
+    pos = besidePos(r, p.beside.side, half, d, p.beside.gap ?? 0, p.beside.offset ?? 0);
+    if (ft) {
+      d = bearing(pos, ft);
+      dir = d;
+      pos = besidePos(r, p.beside.side, half, d, p.beside.gap ?? 0, p.beside.offset ?? 0);
+    }
+    z2 = { kind: "ground" };
+    how = `beside ${p.beside.side}`;
+  }
+  if (ft) {
+    const from = pos ?? (self ? [self.center[0], self.center[1]] : null);
+    if (!from) return { ok: false, error: "face \uB97C \uD480 \uC704\uCE58\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." };
+    dir = bearing(from, ft);
+  }
+  if (p.ground === false) z2 = { kind: "keep" };
+  else if (p.ground === true && z2.kind === "keep") z2 = { kind: "ground" };
+  return { ok: true, pos, dir, z: z2, how };
+}
+
+// src/mcp/tools/eden.ts
+var SERVER = { mode: "server" };
+var DEFAULT_LIMIT2 = 30;
+var MAX_LIMIT2 = 100;
+var DEFAULT_RADIUS = 50;
+var MAX_ITEMS = 20;
+var MAX_OPS = 30;
+var NEIGHBOR_EXTRA = 8;
+var EXEC_TIMEOUT_MS = 15e3;
+var FIND_DEFAULT_LIMIT = 20;
+var QUERY_MAX2 = 80;
+var CANDIDATES = 5;
+var ASSET_SIDES = ["WEST", "EAST", "GUER", "CIV", "EMPTY"];
+var CANDIDATE_KINDS = {
+  Object: ["unit", "vehicle", "object"],
+  Logic: ["module"],
+  Trigger: [],
+  Marker: ["marker"]
+};
+var DEFAULT_LOOK_DELAY_MS = 400;
+var LOOK_MAX_WIDTH = 1024;
+var CAMERA_FLOOR = 1.5;
+var VIEWS = ["top", "front", "side", "iso"];
+var UNDO_HINT = "\uC774 \uD638\uCD9C\uC740 \uC5D0\uB514\uD130 \uC2E4\uD589 \uCDE8\uC18C \uD55C \uB2E8\uACC4\uC785\uB2C8\uB2E4. \uB418\uB3CC\uB9AC\uB824\uBA74 arma_eden_edit { undo: 1 } \uC774\uB098 \uC5D0\uB514\uD130\uC758 Ctrl+Z.";
+function clamp5(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+function joinNotes3(notes) {
+  const kept = notes.filter((n) => typeof n === "string" && n !== "");
+  return kept.length > 0 ? kept.join(" ") : void 0;
+}
+function waitOrAbort2(ms, signal) {
+  return new Promise((resolve) => {
+    if (signal.aborted) return resolve(false);
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(true);
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+function editorProblem(deps) {
+  if (!deps.gateway.isConnected()) return "game not connected";
+  const ed = deps.telemetry.current().editor;
+  if (ed === true) return null;
+  if (ed === false) return "\uC9C0\uAE08 \uC5F0\uACB0\uC740 \uBBF8\uC158\uC785\uB2C8\uB2E4. arma_eden_* \uB294 Eden \uC5D0\uB514\uD130\uC5D0\uC11C\uB9CC \uC501\uB2C8\uB2E4.";
+  return "\uC5F0\uACB0\uB41C \uBE0C\uB9AC\uC9C0\uAC00 \uC5D0\uB514\uD130 \uD45C\uC2DC(editor)\uB97C \uBCF4\uB0B4\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC5D0\uB514\uD130 \uBE0C\uB9AC\uC9C0\uAC00 \uB4E0 @arma_mcp \uC560\uB4DC\uC628\uC744 \uC2E4\uC740 Eden \uC5D0\uB514\uD130\uC5EC\uC57C \uD569\uB2C8\uB2E4. arma_status \uC758 mission.editor \uB97C \uBCF4\uC138\uC694.";
+}
+async function boxesById(deps, ids, ctx) {
+  const uniq = [...new Set(ids.map((n) => Math.trunc(n)))];
+  const boxes = /* @__PURE__ */ new Map();
+  if (uniq.length === 0) return { ok: true, boxes, missing: [] };
+  const key = nextKey(deps.session.shortId, "es");
+  const res = await runPaged(
+    deps,
+    SERVER,
+    buildSceneSqf({ ids: uniq, kinds: [], query: "", layer: "", near: null, radius: 1e9, selected: false, limit: uniq.length, key }),
+    key,
+    "eden-scene-ids",
+    ctx,
+    EXEC_TIMEOUT_MS
+  );
+  if (!res.ok) return { ok: false, error: res.error ?? "no result" };
+  for (const r of res.rows) {
+    const m = mapRow(r);
+    if (m) boxes.set(m.box.id, m.box);
+  }
+  return { ok: true, boxes, missing: uniq.filter((id) => !boxes.has(id)) };
+}
+async function runEdenScene(deps, args, signal) {
+  const problem = editorProblem(deps);
+  if (problem) return { ok: false, error: problem };
+  const kinds = args.kind === void 0 ? [] : Array.isArray(args.kind) ? args.kind : [args.kind];
+  const bad = kinds.find((k) => !SCENE_KINDS.includes(k));
+  if (bad) return { ok: false, error: `kind '${bad}' \uB294 \uC4F8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4(${SCENE_KINDS.join(", ")}).` };
+  let near = null;
+  if (args.near !== void 0) {
+    const [x, y] = args.near;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, error: "near \uB294 [x, y] \uC785\uB2C8\uB2E4." };
+    near = [x, y];
+  }
+  const radius = near ? clamp5(args.radius ?? DEFAULT_RADIUS, 1, 2e4) : 1e9;
+  const limit = clamp5(Math.trunc(args.limit ?? DEFAULT_LIMIT2), 1, MAX_LIMIT2);
+  const ctx = makeSessionExecContext(deps, void 0, signal);
+  const key = nextKey(deps.session.shortId, "es");
+  const res = await runPaged(
+    deps,
+    SERVER,
+    buildSceneSqf({
+      ids: (args.ids ?? []).filter((n) => Number.isFinite(n)),
+      kinds,
+      query: (args.query ?? "").replace(/\s+/g, " ").trim().slice(0, 80),
+      layer: (args.layer ?? "").trim().slice(0, 80),
+      near,
+      radius,
+      selected: args.selected === true,
+      limit,
+      key
+    }),
+    key,
+    "eden-scene",
+    ctx,
+    EXEC_TIMEOUT_MS
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  const boxes = [];
+  const entities = [];
+  for (const r of res.rows) {
+    const m = mapRow(r);
+    if (!m) continue;
+    boxes.push(m.box);
+    entities.push(entityOut(m.box, m.flags));
+  }
+  const matched = typeof res.meta[0] === "number" ? res.meta[0] : entities.length;
+  const selectedCount = typeof res.meta[1] === "number" ? res.meta[1] : void 0;
+  const overlaps = overlapsOut(findOverlaps(boxes));
+  const snap = deps.telemetry.current();
+  return {
+    ok: true,
+    world: snap.world,
+    mission: snap.mission,
+    matched,
+    returned: entities.length,
+    selectedCount,
+    entities,
+    overlaps: overlaps.length > 0 ? overlaps : void 0,
+    note: joinNotes3([
+      matched > entities.length ? `${matched}\uAC1C \uC911 ${entities.length}\uAC1C\uB9CC \uB3CC\uB824\uC92C\uC2B5\uB2C8\uB2E4. query, kind, near \uB85C \uC881\uD788\uAC70\uB098 limit \uC744 \uB298\uB9AC\uC138\uC694.` : void 0,
+      args.selected === true && matched === 0 ? "\uC5D0\uB514\uD130\uC5D0\uC11C \uC120\uD0DD\uD55C \uAC83\uC774 \uC5C6\uC2B5\uB2C8\uB2E4." : void 0,
+      overlaps.length > 0 ? "\uB3CC\uB824\uC900 \uC5D4\uD2F0\uD2F0\uB07C\uB9AC\uC758 \uC0C1\uC790 \uACB9\uCE68\uB9CC \uBD24\uC2B5\uB2C8\uB2E4. \uB9F5 \uAC74\uBB3C\uACFC\uC758 \uACB9\uCE68\uC740 arma_eden_place, edit \uACB0\uACFC\uC5D0 \uB098\uC635\uB2C8\uB2E4." : void 0
+    ]),
+    exec: { count: res.execs, durationMs: res.durationMs }
+  };
+}
+async function searchAssets(deps, a, ctx) {
+  const key = nextKey(deps.session.shortId, "ea");
+  const res = await runPaged(deps, SERVER, buildAssetsSqf({ ...a, key }), key, "eden-find", ctx, EXEC_TIMEOUT_MS);
+  if (!res.ok) return { ok: false, error: res.error ?? "no result" };
+  const [language, indexed] = res.meta;
+  return {
+    ok: true,
+    total: res.total,
+    rows: res.rows,
+    language: typeof language === "string" ? language : void 0,
+    indexed: typeof indexed === "number" ? indexed : void 0,
+    execs: res.execs,
+    durationMs: res.durationMs
+  };
+}
+async function runEdenFind(deps, args, signal) {
+  const problem = editorProblem(deps);
+  if (problem) return { ok: false, error: problem };
+  const query = (args.query ?? "").replace(/\s+/g, " ").trim().slice(0, QUERY_MAX2);
+  const kinds = args.kind === void 0 ? [] : Array.isArray(args.kind) ? args.kind : [args.kind];
+  const bad = kinds.find((k) => !ASSET_KINDS.includes(k));
+  if (bad) return { ok: false, error: `kind '${bad}' \uB294 \uC4F8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4(${ASSET_KINDS.join(", ")}).` };
+  const side = args.side ?? "";
+  if (side !== "" && !ASSET_SIDES.includes(side)) {
+    return { ok: false, error: `side \uB294 ${ASSET_SIDES.join(", ")} \uC911 \uD558\uB098\uC785\uB2C8\uB2E4.` };
+  }
+  const limit = clamp5(Math.trunc(args.limit ?? FIND_DEFAULT_LIMIT), 1, MAX_LIMIT2);
+  const ctx = makeSessionExecContext(deps, void 0, signal);
+  const res = await searchAssets(deps, { query, kinds, side, limit }, ctx);
+  if (!res.ok) return { ok: false, error: res.error };
+  const results = res.rows.map((r) => mapAssetRow(r));
+  return {
+    ok: true,
+    language: res.language,
+    total: res.total,
+    returned: results.length,
+    results,
+    note: joinNotes3([
+      res.total > results.length ? `${res.total}\uAC1C \uC911 ${results.length}\uAC1C\uB9CC \uB3CC\uB824\uC92C\uC2B5\uB2C8\uB2E4. query \uB97C \uC881\uD788\uAC70\uB098 limit \uC744 \uB298\uB9AC\uC138\uC694.` : void 0,
+      results.some((r) => r.kind === "group") ? "\uADF8\uB8F9 \uD3B8\uC131(group)\uC740 arma_eden_place \uB85C \uB193\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. sqf \uC758 config \uACBD\uB85C\uB97C create3DENComposition \uC5D0 \uC501\uB2C8\uB2E4." : void 0
+    ]),
+    exec: { count: res.execs, durationMs: res.durationMs }
+  };
+}
+async function runEdenLook(deps, args, signal, io = {}) {
+  const fail = (error62, extra = {}) => ({ images: [], meta: { ok: false, error: error62, ...extra } });
+  const problem = editorProblem(deps);
+  if (problem) return fail(problem);
+  if (deps.cfg.mcp.disableTools.includes("arma_capture")) return fail("arma_capture \uAC00 disableTools \uB85C \uAEBC\uC838 \uC788\uB2E4");
+  const views = (args.views && args.views.length > 0 ? args.views : ["iso", "top"]).filter(
+    (v) => VIEWS.includes(v)
+  );
+  if (views.length === 0) return fail(`views \uB294 ${VIEWS.join(", ")} \uC911\uC5D0\uC11C \uACE0\uB985\uB2C8\uB2E4.`);
+  const ctx = makeSessionExecContext(deps, void 0, signal);
+  let targets = [];
+  let center;
+  let radius;
+  let facing = 180;
+  if (args.ids && args.ids.length > 0) {
+    const got = await boxesById(deps, args.ids, ctx);
+    if (!got.ok) return fail(got.error);
+    if (got.missing.length > 0) return fail(`id ${got.missing.join(", ")} \uB97C \uC5D0\uB514\uD130\uC5D0\uC11C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.`);
+    targets = [...got.boxes.values()];
+    ({ center, radius } = frameOf(targets));
+    if (targets.length === 1) facing = targets[0].dir;
+  } else if (args.at && args.at.length >= 2 && args.at.every((n) => Number.isFinite(n))) {
+    const tz = await execValue(deps, SERVER, buildTerrainSqf(args.at[0], args.at[1]), "eden-terrain", ctx, 5e3);
+    const ground = tz.value?.[0] === "OK" ? Number(tz.value[1]) : 0;
+    center = [args.at[0], args.at[1], args.at.length >= 3 ? args.at[2] : ground + 1];
+    radius = clamp5(args.radius ?? 15, 1, 2e3);
+  } else {
+    return fail("ids \uB098 at \uC744 \uC8FC\uC138\uC694.");
+  }
+  const shots = [];
+  const images = [];
+  const restore = args.restore !== false;
+  try {
+    for (const view of views) {
+      if (signal.aborted) break;
+      let floorZ = -Infinity;
+      if (view !== "top") {
+        const probe = cameraFor(view, center, radius, facing);
+        const tz = await execValue(deps, SERVER, buildTerrainSqf(probe.pos[0], probe.pos[1]), "eden-terrain", ctx, 5e3);
+        if (tz.value?.[0] === "OK") floorZ = Number(tz.value[1]) + CAMERA_FLOOR;
+      }
+      const cam = cameraFor(view, center, radius, facing, 40, floorZ);
+      const moved = await execValue(deps, SERVER, buildCameraSqf(cam.pos, cam.vectorDir, cam.vectorUp), "eden-camera", ctx, 5e3);
+      if (moved.value?.[0] !== "OK") {
+        return fail(
+          moved.value?.[0] === "NOCAM" ? "\uC5D0\uB514\uD130 \uCE74\uBA54\uB77C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." : `\uCE74\uBA54\uB77C\uB97C \uC62E\uAE30\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${moved.error ?? String(moved.value?.[0])}`,
+          { shots }
+        );
+      }
+      const delayMs = clamp5(args.delayMs ?? DEFAULT_LOOK_DELAY_MS, 0, 5e3);
+      if (!await waitOrAbort2(delayMs, signal)) break;
+      let labels;
+      if (targets.length > 0) {
+        const pr = await execValue(
+          deps,
+          SERVER,
+          buildProjectSqf(targets.map((t) => ({ id: t.id, pos: t.center }))),
+          "eden-project",
+          ctx,
+          5e3
+        );
+        const list = pr.value?.[0] === "OK" && Array.isArray(pr.value[1]) ? pr.value[1] : [];
+        labels = list.filter((e) => Array.isArray(e)).map((e) => e[1] === "" ? { id: e[0], onScreen: false } : { id: e[0], x: Number(e[1]), y: Number(e[2]) });
+      }
+      const shot = await captureForTool(
+        deps,
+        { delayMs: 0, maxWidth: args.maxWidth ?? LOOK_MAX_WIDTH },
+        io
+      );
+      const img = shot.content.filter((b) => b.type === "image");
+      images.push(...img);
+      shots.push({
+        view,
+        image: img.length > 0 ? images.length : null,
+        camera: { pos: cam.pos, distance: cam.distance },
+        labels,
+        ...shot.meta.ok === false ? { captureError: shot.meta.error ?? shot.meta.stage } : {}
+      });
+    }
+  } finally {
+    if (restore) {
+      await execValue(deps, SERVER, buildCameraRestoreSqf(), "eden-camera-restore", makeSessionExecContext(deps), 5e3);
+    }
+  }
+  return {
+    images,
+    meta: {
+      ok: images.length > 0,
+      ...images.length === 0 ? { error: "\uD654\uBA74\uC744 \uCC0D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4(shots \uC758 captureError)." } : {},
+      frame: { center, radius },
+      shots,
+      note: joinNotes3([
+        "image \uB294 \uC774 \uC751\uB2F5\uC758 \uBA87 \uBC88\uC9F8 \uC774\uBBF8\uC9C0\uC778\uC9C0\uB2E4. labels \uC758 x, y \uB294 \uD654\uBA74 \uD3ED\uACFC \uB192\uC774\uC5D0 \uB300\uD55C \uBE44\uC728(\uC67C\uCABD \uC704 0, 0)\uC774\uACE0 \uC5D4\uD2F0\uD2F0 \uC0C1\uC790 \uC911\uC2EC\uC774\uB2E4.",
+        "\uC5D0\uB514\uD130 \uD328\uB110\uC774 \uD654\uBA74 \uAC00\uC7A5\uC790\uB9AC\uB97C \uAC00\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uD310\uC815\uC740 \uC774\uBBF8\uC9C0\uBCF4\uB2E4 arma_eden_scene \uC758 ground, overlaps \uB97C \uBBFF\uC73C\uC138\uC694.",
+        restore ? "\uCE74\uBA54\uB77C\uB294 \uC6D0\uB798 \uC790\uB9AC\uB85C \uB418\uB3CC\uB838\uC2B5\uB2C8\uB2E4." : "\uCE74\uBA54\uB77C\uB97C \uB9C8\uC9C0\uB9C9 \uC2DC\uC810\uC5D0 \uB450\uC5C8\uC2B5\uB2C8\uB2E4."
+      ])
+    }
+  };
+}
+async function runEdenPlace(deps, args, signal) {
+  const problem = editorProblem(deps);
+  if (problem) return { ok: false, error: problem };
+  const items = Array.isArray(args.items) ? args.items : [];
+  if (items.length === 0) return { ok: false, error: "items \uAC00 \uD544\uC694\uD569\uB2C8\uB2E4." };
+  if (items.length > MAX_ITEMS) return { ok: false, error: `\uD55C \uBC88\uC5D0 ${MAX_ITEMS}\uAC1C\uAE4C\uC9C0 \uB193\uC2B5\uB2C8\uB2E4. \uB098\uB220\uC11C \uBD80\uB974\uC138\uC694.` };
+  for (const [i, it] of items.entries()) {
+    if (typeof it.class !== "string" || it.class.trim() === "") return { ok: false, error: `items[${i}].class \uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.` };
+    if (it.at === void 0 && it.on === void 0 && it.beside === void 0) {
+      return { ok: false, error: `items[${i}] \uC5D0 at, on, beside \uC911 \uD558\uB098\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.` };
+    }
+    if (it.by !== void 0 || it.turn !== void 0) return { ok: false, error: `items[${i}]: by \uC640 turn \uC740 edit \uC5D0\uC11C\uB9CC \uC501\uB2C8\uB2E4.` };
+  }
+  const ctx = makeSessionExecContext(deps, void 0, signal);
+  const refs = await boxesById(deps, items.flatMap((it) => refIds(it)), ctx);
+  if (!refs.ok) return { ok: false, error: `\uCC38\uC870 \uC5D4\uD2F0\uD2F0\uB97C \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${refs.error}` };
+  if (refs.missing.length > 0) {
+    return { ok: false, error: `id ${refs.missing.join(", ")} \uB97C \uC5D0\uB514\uD130\uC5D0\uC11C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. arma_eden_scene \uC73C\uB85C \uB2E4\uC2DC \uCC3E\uC73C\uC138\uC694.` };
+  }
+  const pairs = [...new Map(items.map((it) => {
+    const mode = MODE_OF[it.type ?? "object"];
+    return [`${mode}|${it.class.trim()}`, [it.class.trim(), mode]];
+  })).values()];
+  const ckey = nextKey(deps.session.shortId, "ec");
+  const cls = await runPaged(deps, SERVER, buildClassSqf({ classes: pairs, key: ckey }), ckey, "eden-class", ctx, EXEC_TIMEOUT_MS);
+  if (!cls.ok) return { ok: false, error: `\uD074\uB798\uC2A4\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${cls.error}` };
+  const sizes = /* @__PURE__ */ new Map();
+  const missingCls = [];
+  for (const r of cls.rows) {
+    const [c, state, half] = r;
+    if (typeof c !== "string") continue;
+    if (state === 0) {
+      missingCls.push(c);
+    } else {
+      const h = typeof half === "string" && half !== "" ? half.split(",").map(Number) : null;
+      sizes.set(c, h && h.length === 3 && h.every((n) => Number.isFinite(n)) ? h : null);
+    }
+  }
+  if (missingCls.length > 0) {
+    const unknown2 = [];
+    for (const c of missingCls) {
+      const mode = pairs.find(([pc]) => pc === c)?.[1] ?? "Object";
+      const kinds = CANDIDATE_KINDS[mode];
+      const found = kinds.length > 0 ? await searchAssets(deps, { query: c, kinds, side: "", limit: CANDIDATES }, ctx) : null;
+      const candidates = found && found.ok ? found.rows.map((r) => String(r[1] ?? "")).filter((s) => s !== "") : [];
+      unknown2.push({ class: c, candidates });
+    }
+    return {
+      ok: false,
+      error: `\uC5C6\uB294 \uD074\uB798\uC2A4\uC785\uB2C8\uB2E4: ${missingCls.join(", ")}. \uC544\uBB34\uAC83\uB3C4 \uB9CC\uB4E4\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`,
+      unknown: unknown2,
+      hint: "candidates \uC5D0\uC11C \uACE0\uB974\uAC70\uB098, \uC0AC\uC6A9\uC790\uAC00 \uB9D0\uD55C \uC774\uB984\uC774\uBA74 arma_eden_find { query } \uB85C \uC5D0\uB514\uD130 \uC790\uC0B0 \uD328\uB110\uC758 \uD45C\uC2DC \uC774\uB984\uC73C\uB85C \uCC3E\uC544 \uBCF4\uC138\uC694."
+    };
+  }
+  const notes = [];
+  const solved = [];
+  for (const [i, it] of items.entries()) {
+    const c = it.class.trim();
+    const half = sizes.get(c) ?? null;
+    if (it.beside && !half) notes.push(`items[${i}] ${c} \uC758 \uD06C\uAE30\uB97C \uC7AC\uC9C0 \uBABB\uD574 1 m \uC0C1\uC790\uB85C \uBCF4\uACE0 \uC606\uC5D0 \uB193\uC558\uC2B5\uB2C8\uB2E4.`);
+    const s = solvePlacement(it, refs.boxes, half ?? [0.5, 0.5, 0.5]);
+    if (!s.ok) return { ok: false, error: `items[${i}]: ${s.error}` };
+    if (!s.pos) return { ok: false, error: `items[${i}]: \uC704\uCE58\uB97C \uD480\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.` };
+    solved.push({
+      mode: MODE_OF[it.type ?? "object"],
+      class: c,
+      pos: s.pos,
+      dir: s.dir ?? 0,
+      z: s.z,
+      name: (it.name ?? "").trim().slice(0, 60)
+    });
+  }
+  const key = nextKey(deps.session.shortId, "ep");
+  const res = await runPaged(
+    deps,
+    SERVER,
+    buildPlaceSqf({
+      items: solved,
+      select: args.select !== false,
+      neighborRadius: args.check === false ? 0 : NEIGHBOR_EXTRA,
+      key
+    }),
+    key,
+    "eden-place",
+    ctx,
+    EXEC_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: res.error,
+      note: "\uACB0\uACFC\uB97C \uBC1B\uC9C0 \uBABB\uD588\uC9C0\uB9CC \uC5D0\uB514\uD130\uC5D0\uB294 \uB9CC\uB4E4\uC5B4\uC84C\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4. arma_eden_scene { selected:true } \uB85C \uBCF4\uC138\uC694."
+    };
+  }
+  const j = judge(res.rows);
+  const badIdx = Array.isArray(res.meta[1]) ? res.meta[1].filter((n) => typeof n === "number") : [];
+  return {
+    ok: j.targets.length > 0,
+    created: j.entities,
+    failed: badIdx.length > 0 ? badIdx.map((i) => ({ index: i, class: solved[i]?.class })) : void 0,
+    overlaps: j.overlaps.length > 0 ? j.overlaps : void 0,
+    note: joinNotes3([
+      verdictNote(j.targets, j.overlaps),
+      badIdx.length > 0 ? `create3DENEntity \uAC00 ${badIdx.length}\uAC1C\uB97C \uB9CC\uB4E4\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4(failed).` : void 0,
+      ...notes,
+      j.targets.length > 0 ? UNDO_HINT : void 0
+    ]),
+    exec: { count: res.execs + cls.execs, durationMs: res.durationMs + cls.durationMs }
+  };
+}
+async function runEdenEdit(deps, args, signal) {
+  const problem = editorProblem(deps);
+  if (problem) return { ok: false, error: problem };
+  const ops = Array.isArray(args.ops) ? args.ops : [];
+  const ctx = makeSessionExecContext(deps, void 0, signal);
+  if (args.undo !== void 0) {
+    if (ops.length > 0) return { ok: false, error: "undo \uC640 ops \uB294 \uD568\uAED8 \uC904 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." };
+    const r = await execValue(deps, SERVER, buildUndoSqf(args.undo), "eden-undo", ctx, 5e3);
+    if (r.value?.[0] !== "OK") return { ok: false, error: `\uC2E4\uD589 \uCDE8\uC18C\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${r.error ?? String(r.value?.[0])}` };
+    return { ok: true, undone: r.value[1], note: "\uC5D0\uB514\uD130\uC758 \uC2E4\uD589 \uCDE8\uC18C\uB97C \uB20C\uB800\uC2B5\uB2C8\uB2E4. \uACB0\uACFC\uB294 arma_eden_scene \uC73C\uB85C \uBCF4\uC138\uC694." };
+  }
+  if (ops.length === 0) return { ok: false, error: "ops \uB098 undo \uAC00 \uD544\uC694\uD569\uB2C8\uB2E4." };
+  if (ops.length > MAX_OPS) return { ok: false, error: `\uD55C \uBC88\uC5D0 ${MAX_OPS}\uAC1C\uAE4C\uC9C0 \uACE0\uCE69\uB2C8\uB2E4. \uB098\uB220\uC11C \uBD80\uB974\uC138\uC694.` };
+  for (const [i, o] of ops.entries()) {
+    if (!Number.isFinite(o.id)) return { ok: false, error: `ops[${i}].id \uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.` };
+    if (o.z !== void 0 && (o.at !== void 0 || o.on !== void 0 || o.beside !== void 0 || o.by !== void 0)) {
+      return { ok: false, error: `ops[${i}]: z \uB294 \uC704\uCE58\uB97C \uADF8\uB300\uB85C \uB450\uACE0 \uB192\uC774\uB9CC \uBC14\uAFC0 \uB54C \uC501\uB2C8\uB2E4. at \uC774\uBA74 [x, y, z] \uB85C \uC8FC\uC138\uC694.` };
+    }
+  }
+  const got = await boxesById(deps, ops.flatMap((o) => [o.id, ...refIds(o)]), ctx);
+  if (!got.ok) return { ok: false, error: `\uC5D4\uD2F0\uD2F0\uB97C \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${got.error}` };
+  if (got.missing.length > 0) {
+    return { ok: false, error: `id ${got.missing.join(", ")} \uB97C \uC5D0\uB514\uD130\uC5D0\uC11C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. arma_eden_scene \uC73C\uB85C \uB2E4\uC2DC \uCC3E\uC73C\uC138\uC694.` };
+  }
+  const solved = [];
+  for (const [i, o] of ops.entries()) {
+    const self = got.boxes.get(Math.trunc(o.id));
+    if (o.delete === true) {
+      solved.push({ id: self.id, pos: null, dir: null, z: { kind: "keep" }, name: null, delete: true });
+      continue;
+    }
+    const s = solvePlacement(o, got.boxes, self.half, self);
+    if (!s.ok) return { ok: false, error: `ops[${i}]: ${s.error}` };
+    solved.push({
+      id: self.id,
+      pos: s.pos,
+      dir: s.dir,
+      z: o.z !== void 0 ? { kind: "asl", z: o.z } : s.z,
+      name: o.name === void 0 ? null : o.name.trim().slice(0, 60),
+      delete: false
+    });
+  }
+  const key = nextKey(deps.session.shortId, "ee");
+  const res = await runPaged(
+    deps,
+    SERVER,
+    buildEditSqf({ ops: solved, neighborRadius: args.check === false ? 0 : NEIGHBOR_EXTRA, key }),
+    key,
+    "eden-edit",
+    ctx,
+    EXEC_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: res.error,
+      note: "\uACB0\uACFC\uB97C \uBC1B\uC9C0 \uBABB\uD588\uC9C0\uB9CC \uC5D0\uB514\uD130\uC5D0\uB294 \uBC14\uB00C\uC5C8\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4. arma_eden_scene { ids } \uB85C \uBCF4\uC138\uC694."
+    };
+  }
+  const j = judge(res.rows);
+  const [, deleted, missing] = res.meta;
+  const missingIds = Array.isArray(missing) ? missing.filter((n) => typeof n === "number") : [];
+  return {
+    ok: missingIds.length === 0,
+    changed: j.entities,
+    deleted: typeof deleted === "number" && deleted > 0 ? deleted : void 0,
+    missing: missingIds.length > 0 ? missingIds : void 0,
+    overlaps: j.overlaps.length > 0 ? j.overlaps : void 0,
+    note: joinNotes3([verdictNote(j.targets, j.overlaps), UNDO_HINT]),
+    exec: { count: res.execs, durationMs: res.durationMs }
+  };
+}
+var ID = external_exports.number().int().describe("arma_eden_scene \uC758 id(Eden \uC5D4\uD2F0\uD2F0 id).");
+var XY = external_exports.array(external_exports.number()).min(2).max(2);
+var SIDE = external_exports.enum(["front", "back", "left", "right"]);
+var BESIDE = external_exports.object({
+  id: ID,
+  side: SIDE.describe("ref \uAE30\uC900 \uCABD. front \uB294 ref \uAC00 \uBC14\uB77C\uBCF4\uB294 \uCABD\uC774\uB2E4."),
+  gap: external_exports.number().min(0).max(100).optional().describe("\uB450 \uC0C1\uC790 \uC0AC\uC774 \uD2C8(m). \uAE30\uBCF8 0(\uB9DE\uB2FF\uC74C)."),
+  offset: external_exports.number().min(-100).max(100).optional().describe("ref \uCD95\uC744 \uB530\uB77C \uC606\uC73C\uB85C \uBBF8\uB294 \uAC70\uB9AC(m).")
+}).describe("ref \uC758 \uADF8 \uCABD\uC5D0 \uC0C1\uC790\uB07C\uB9AC \uB9DE\uB2FF\uAC8C(\uB610\uB294 gap \uB9CC\uD07C \uB744\uC6CC) \uB193\uB294\uB2E4. \uD06C\uAE30\uB294 \uAC8C\uC784\uC5D0\uC11C \uC7B0\uB2E4.");
+var PLACEMENT_FIELDS = {
+  on: ID.optional().describe("\uC774 \uC5D4\uD2F0\uD2F0 \uC704\uC5D0 \uC62C\uB9B0\uB2E4. \uB192\uC774\uB294 \uADF8 \uBB3C\uCCB4 \uC717\uBA74(\uC544\uB798\uB85C \uC3DC \uC120\uC774 \uB2FF\uC740 \uACF3)\uC774\uB2E4."),
+  offset: external_exports.array(external_exports.number()).min(2).max(2).optional().describe("on \uC77C \uB54C ref \uCD95 \uAE30\uC900 [\uC624\uB978\uCABD, \uC55E] \uC774\uB3D9(m)."),
+  beside: BESIDE.optional(),
+  dir: external_exports.number().optional().describe("\uBC29\uC704\uAC01(\uB3C4). \uBD81\uCABD 0, \uC2DC\uACC4 \uBC29\uD5A5. \uB3D9\uCABD 90."),
+  face: external_exports.union([ID, XY]).optional().describe("\uC774 \uC5D4\uD2F0\uD2F0 id \uB098 [x, y] \uB97C \uBC14\uB77C\uBCF4\uAC8C \uB3CC\uB9B0\uB2E4."),
+  alignWith: ID.optional().describe("\uC774 \uC5D4\uD2F0\uD2F0\uC640 \uAC19\uC740 \uBC29\uD5A5\uC73C\uB85C \uB3CC\uB9B0\uB2E4."),
+  ground: external_exports.boolean().optional().describe("\uAE30\uBCF8: \uC704\uCE58\uAC00 \uBC14\uB00C\uBA74 \uC9C0\uBA74\uC5D0 \uB0B4\uB9B0\uB2E4. false \uBA74 \uB192\uC774\uB97C \uAC74\uB4DC\uB9AC\uC9C0 \uC54A\uB294\uB2E4. true \uBA74 \uC704\uCE58\uAC00 \uADF8\uB300\uB85C\uC5EC\uB3C4 \uB0B4\uB9B0\uB2E4.")
+};
+var AXES_NOTE = "\uC88C\uD45C\uB294 Arma \uC6D4\uB4DC\uB2E4: +X \uB3D9\uCABD, +Y \uBD81\uCABD, \uB192\uC774\uB294 \uD574\uC218\uBA74 \uAE30\uC900(ASL) m, \uBC29\uC704\uAC01\uC740 \uBD81\uCABD\uC5D0\uC11C \uC2DC\uACC4 \uBC29\uD5A5. \uBB3C\uCCB4\uC758 \uC55E\uC740 \uBAA8\uB378 +Y \uB2E4(\uCC28\uB7C9\uC758 \uC55E, \uAC74\uBB3C\uC758 \uC815\uBA74).";
+function registerEdenTools(server, shared, io = {}) {
+  server.registerTool(
+    "arma_eden_scene",
+    {
+      title: "Eden \uC5D0\uB514\uD130 \uC7A5\uBA74 \uC77D\uAE30",
+      description: "Eden \uC5D0\uB514\uD130\uC758 \uC5D4\uD2F0\uD2F0(\uC720\uB2DB, \uCC28\uB7C9, \uBB3C\uCCB4, \uBAA8\uB4C8, \uD2B8\uB9AC\uAC70, \uB9C8\uCEE4)\uB97C \uD55C \uC904\uC529 \uC77D\uB294\uB2E4. \uBC30\uCE58\uB098 \uD3B8\uC9D1 \uC804\uC5D0 \uBA3C\uC800 \uBD80\uB978\uB2E4. \uAC01 \uC904: id, kind, class, name, layer, at(\uC0C1\uC790 \uC911\uC2EC [x, y]), dir, size([\uD3ED, \uAE38\uC774, \uB192\uC774] m), z.bottom(\uBC14\uB2E5 ASL), z.attr(\uC5D0\uB514\uD130\uC5D0 \uBCF4\uC774\uB294 \uB192\uC774), ground(ground, floating <\uD2C8>, sunk <\uAE4A\uC774>), slope, tilt. overlaps \uB294 \uB3CC\uB824\uC900 \uC5D4\uD2F0\uD2F0\uB07C\uB9AC\uC758 \uC0C1\uC790 \uACB9\uCE68\uC774\uB2E4. " + AXES_NOTE + " \uAC12\uC744 \uCD94\uCE21\uD558\uC9C0 \uB9D0\uACE0 \uC5EC\uAE30\uC11C \uC7B0 \uAC12\uC744 \uC4F4\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.",
+      inputSchema: {
+        stack: STACK_INPUT,
+        ids: external_exports.array(external_exports.number().int()).optional().describe("\uC774 id \uB4E4\uB9CC."),
+        kind: external_exports.union([external_exports.enum(["unit", "vehicle", "object", "logic", "trigger", "marker"]), external_exports.array(external_exports.enum(["unit", "vehicle", "object", "logic", "trigger", "marker"]))]).optional().describe("\uC885\uB958 \uD558\uB098\uB098 \uBC30\uC5F4."),
+        query: external_exports.string().optional().describe("\uD074\uB798\uC2A4, \uBCC0\uC218 \uC774\uB984, \uB808\uC774\uC5B4, \uD45C\uC2DC \uC774\uB984 \uC870\uAC01(\uB300\uC18C\uBB38\uC790 \uBB34\uC2DC)."),
+        layer: external_exports.string().optional().describe("\uC774 \uB808\uC774\uC5B4 \uC774\uB984\uB9CC(\uB300\uC18C\uBB38\uC790 \uBB34\uC2DC, \uC815\uD655\uD788 \uAC19\uC740 \uC774\uB984)."),
+        near: XY.optional().describe("[x, y]. radius \uC548\uC758 \uAC83\uB9CC \uAC00\uAE4C\uC6B4 \uC21C\uC73C\uB85C."),
+        radius: external_exports.number().min(1).max(2e4).optional().describe(`near \uBC18\uACBD(m). \uAE30\uBCF8 ${DEFAULT_RADIUS}.`),
+        selected: external_exports.boolean().optional().describe("\uC5D0\uB514\uD130\uC5D0\uC11C \uC9C0\uAE08 \uC120\uD0DD\uD55C \uAC83\uB9CC."),
+        limit: external_exports.number().int().min(1).max(MAX_LIMIT2).optional().describe(`\uCD5C\uB300 \uC218. \uAE30\uBCF8 ${DEFAULT_LIMIT2}.`)
+      }
+    },
+    onStack(
+      shared,
+      {},
+      async (deps, args, extra) => withAbortSignals(
+        [deps.session.abortController.signal, extra?.signal],
+        async (signal) => jsonContent(await runEdenScene(deps, args, signal))
+      )
+    )
+  );
+  server.registerTool(
+    "arma_eden_find",
+    {
+      title: "Eden \uC790\uC0B0 \uD328\uB110\uC5D0\uC11C \uCC3E\uAE30",
+      description: "\uC5D0\uB514\uD130 \uC624\uB978\uCABD \uC790\uC0B0 \uD328\uB110(\uC720\uB2DB, \uCC28\uB7C9, \uBE48 \uBB3C\uCCB4, \uBAA8\uB4C8, \uADF8\uB8F9 \uD3B8\uC131, \uB9C8\uCEE4)\uC5D0\uC11C \uD45C\uC2DC \uC774\uB984\uC774\uB098 \uD074\uB798\uC2A4 \uC870\uAC01\uC73C\uB85C \uCC3E\uB294\uB2E4. \uC0AC\uC6A9\uC790\uAC00 \uBB3C\uCCB4\uB97C \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uC774\uB984\uC73C\uB85C \uB9D0\uD558\uBA74 arma_eden_place \uC804\uC5D0 \uBD80\uB978\uB2E4. \uACB0\uACFC place \uB294 arma_eden_place \uC758 \uD56D\uBAA9\uC5D0 \uADF8\uB300\uB85C \uB123\uB294 class \uC640 type \uC774\uB2E4. \uBAA8\uB4C8\uC758 is3DEN \uC740 \uC5D0\uB514\uD130 \uC18D\uC131 \uCC3D\uC744 \uC4F0\uB294 \uBAA8\uB4C8, zeus \uB294 Zeus \uBAA9\uB85D\uC5D0\uB3C4 \uC788\uB294 \uAC83\uC774\uB2E4. \uC774 \uBAA9\uB85D\uC740 \uC5D0\uB514\uD130 \uAE30\uC900(scope 2)\uC774\uB77C Zeus \uBAA9\uB85D(arma_zeus_find palette)\uACFC \uB2E4\uB974\uB2E4. \uD45C\uC2DC \uC774\uB984\uC740 \uAC8C\uC784 \uC5B8\uC5B4\uB2E4. \uAC8C\uC784\uC744 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.",
+      inputSchema: {
+        stack: STACK_INPUT,
+        query: external_exports.string().max(QUERY_MAX2).optional().describe("\uD45C\uC2DC \uC774\uB984, \uD074\uB798\uC2A4, \uACBD\uB85C \uC870\uAC01(\uB300\uC18C\uBB38\uC790 \uBB34\uC2DC). \uB0B1\uB9D0\uC774 \uBAA8\uB450 \uB4E4\uC5B4 \uC788\uC5B4\uB3C4 \uB9DE\uB294\uB2E4."),
+        kind: external_exports.union([external_exports.enum(["unit", "vehicle", "object", "module", "group", "marker"]), external_exports.array(external_exports.enum(["unit", "vehicle", "object", "module", "group", "marker"]))]).optional().describe("\uC885\uB958 \uD558\uB098\uB098 \uBC30\uC5F4."),
+        side: external_exports.enum(ASSET_SIDES).optional().describe("\uC9C4\uC601. \uBE48 \uBB3C\uCCB4\uB294 EMPTY."),
+        limit: external_exports.number().int().min(1).max(MAX_LIMIT2).optional().describe(`\uCD5C\uB300 \uC218. \uAE30\uBCF8 ${FIND_DEFAULT_LIMIT}.`)
+      }
+    },
+    onStack(
+      shared,
+      {},
+      async (deps, args, extra) => withAbortSignals(
+        [deps.session.abortController.signal, extra?.signal],
+        async (signal) => jsonContent(await runEdenFind(deps, args, signal))
+      )
+    )
+  );
+  server.registerTool(
+    "arma_eden_look",
+    {
+      title: "Eden \uC5D0\uB514\uD130 \uD654\uBA74 \uBCF4\uAE30",
+      description: "\uB300\uC0C1\uC774 \uD654\uBA74\uC5D0 \uB4E4\uC5B4\uC624\uAC8C \uC5D0\uB514\uD130 \uCE74\uBA54\uB77C\uB97C \uC62E\uACA8 \uCC0D\uB294\uB2E4. views \uB9C8\uB2E4 \uC774\uBBF8\uC9C0 \uD55C \uC7A5(top \uC704, front \uB300\uC0C1\uC758 \uC55E, side \uB300\uC0C1\uC758 \uC624\uB978\uCABD, iso \uC55E \uC624\uB978\uCABD \uC704 35\uB3C4). labels \uB294 \uC5D4\uD2F0\uD2F0 id \uAC00 \uC774\uBBF8\uC9C0\uC758 \uC5B4\uB514\uC5D0 \uC788\uB294\uC9C0(0~1 \uBE44\uC728)\uB2E4. \uBC30\uCE58 \uBB36\uC74C\uC774 \uB05D\uB0A0 \uB54C\uB9C8\uB2E4 \uD55C \uBC88 \uBCF4\uACE0, \uACB9\uCE68\uACFC \uB192\uC774 \uD310\uC815\uC740 \uC774\uBBF8\uC9C0\uAC00 \uC544\uB2C8\uB77C arma_eden_scene \uC758 \uAC12\uC73C\uB85C \uD55C\uB2E4. \uCE74\uBA54\uB77C\uB294 \uAE30\uBCF8\uC73C\uB85C \uC6D0\uB798 \uC790\uB9AC\uB85C \uB418\uB3CC\uB9B0\uB2E4. \uC5D0\uB514\uD130 \uC5D4\uD2F0\uD2F0\uB294 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4.",
+      inputSchema: {
+        stack: STACK_INPUT,
+        ids: external_exports.array(external_exports.number().int()).optional().describe("\uD654\uBA74\uC5D0 \uB2F4\uC744 \uC5D4\uD2F0\uD2F0 id \uB4E4."),
+        at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("ids \uB300\uC2E0 \uBCFC \uC810 [x, y(, z ASL)]."),
+        radius: external_exports.number().min(1).max(2e3).optional().describe("at \uC77C \uB54C \uB2F4\uC744 \uBC18\uACBD(m). \uAE30\uBCF8 15."),
+        views: external_exports.array(external_exports.enum(["top", "front", "side", "iso"])).min(1).max(4).optional().describe("\uAE30\uBCF8 ['iso','top']."),
+        restore: external_exports.boolean().optional().describe("\uB05D\uB098\uACE0 \uCE74\uBA54\uB77C\uB97C \uC6D0\uB798 \uC790\uB9AC\uB85C \uB418\uB3CC\uB9B0\uB2E4. \uAE30\uBCF8 true."),
+        delayMs: external_exports.number().int().min(0).max(5e3).optional().describe(`\uCE74\uBA54\uB77C\uB97C \uC62E\uAE30\uACE0 \uCC0D\uAE30 \uC804 \uB300\uAE30(ms). \uAE30\uBCF8 ${DEFAULT_LOOK_DELAY_MS}.`),
+        maxWidth: external_exports.number().int().min(320).max(3840).optional().describe(`\uC774\uBBF8\uC9C0 \uD3ED \uC0C1\uD55C. \uAE30\uBCF8 ${LOOK_MAX_WIDTH}.`)
+      }
+    },
+    onStack(
+      shared,
+      {},
+      async (deps, args, extra) => withAbortSignals([deps.session.abortController.signal, extra?.signal], async (signal) => {
+        const r = await runEdenLook(deps, args, signal, io);
+        return { content: [...r.images, ...jsonContent(r.meta).content] };
+      })
+    )
+  );
+  server.registerTool(
+    "arma_eden_place",
+    {
+      title: "Eden \uC5D0\uB514\uD130\uC5D0 \uB193\uAE30",
+      description: "\uC5D0\uB514\uD130\uC5D0 \uC5D4\uD2F0\uD2F0\uB97C \uB9CC\uB4E0\uB2E4. \uC0AC\uC6A9\uC790\uAC00 \uBC30\uCE58\uB97C \uC694\uCCAD\uD588\uC744 \uB54C\uB9CC \uC4F4\uB2E4. \uD56D\uBAA9\uB9C8\uB2E4 at(\uC0C1\uC790 \uC911\uC2EC [x, y] \uB97C \uC9C0\uBA74\uC5D0, [x, y, z] \uB294 \uBC14\uB2E5 ASL), on(\uADF8 \uC5D4\uD2F0\uD2F0 \uC704), beside(\uADF8 \uC5D4\uD2F0\uD2F0 \uC606\uC5D0 \uB9DE\uB2FF\uAC8C) \uC911 \uD558\uB098\uC640, dir, face, alignWith \uC911 \uD558\uB098\uB97C \uC900\uB2E4. \uC88C\uD45C\uB97C \uB208\uB300\uC911\uC73C\uB85C \uCC0D\uAE30\uBCF4\uB2E4 on, beside, face \uB85C \uAD00\uACC4\uB97C \uC8FC\uBA74 \uD06C\uAE30\uB97C \uC7AC\uC11C \uACB9\uCE58\uC9C0 \uC54A\uAC8C \uD47C\uB2E4. \uACB0\uACFC created \uB294 \uB9CC\uB4E0 \uB4A4 \uB2E4\uC2DC \uC7B0 \uC904(arma_eden_scene \uACFC \uAC19\uC740 \uBAA8\uC591)\uC774\uACE0 overlaps \uB294 \uB9F5 \uAC74\uBB3C, \uB098\uBB34, \uB2E4\uB978 \uC5D4\uD2F0\uD2F0\uC640\uC758 \uC0C1\uC790 \uACB9\uCE68\uC774\uB2E4. \uD310\uC815\uC774 \uB098\uC058\uBA74 arma_eden_edit \uB85C \uACE0\uCE5C\uB2E4. \uD074\uB798\uC2A4\uAC00 \uD2C0\uB9AC\uBA74 \uC544\uBB34\uAC83\uB3C4 \uB9CC\uB4E4\uC9C0 \uC54A\uACE0 \uD6C4\uBCF4\uB97C \uB3CC\uB824\uC900\uB2E4. \uD638\uCD9C \uD55C \uBC88\uC774 \uC2E4\uD589 \uCDE8\uC18C \uD55C \uB2E8\uACC4\uC774\uACE0, \uC800\uC7A5\uC740 \uC0AC\uC6A9\uC790\uAC00 \uD55C\uB2E4. " + AXES_NOTE,
+      inputSchema: {
+        stack: STACK_INPUT,
+        items: external_exports.array(
+          external_exports.object({
+            class: external_exports.string().min(1).describe("CfgVehicles \uD074\uB798\uC2A4(\uB9C8\uCEE4\uB294 CfgMarkers). \uC608: Land_CncBarrier_F, B_MRAP_01_F."),
+            type: external_exports.enum(["object", "logic", "trigger", "marker"]).optional().describe("\uAE30\uBCF8 'object'(\uBB3C\uCCB4, \uCC28\uB7C9, \uC720\uB2DB). logic \uC740 \uBAA8\uB4C8, trigger \uB294 EmptyDetector, marker \uB294 \uB9C8\uCEE4."),
+            at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC0C1\uC790 \uC911\uC2EC [x, y] \uB97C \uC9C0\uBA74\uC5D0, \uB610\uB294 [x, y, z] \uBC14\uB2E5 ASL. scene \uC758 at \uACFC \uAC19\uC740 \uAE30\uC900\uC774\uB2E4."),
+            ...PLACEMENT_FIELDS,
+            name: external_exports.string().optional().describe("\uBCC0\uC218 \uC774\uB984.")
+          })
+        ).min(1).max(MAX_ITEMS),
+        select: external_exports.boolean().optional().describe("\uB9CC\uB4E0 \uAC83\uC744 \uC5D0\uB514\uD130\uC5D0\uC11C \uC120\uD0DD\uD574 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBCF4\uC5EC \uC900\uB2E4. \uAE30\uBCF8 true."),
+        check: external_exports.boolean().optional().describe("\uB458\uB808\uC758 \uB9F5 \uBB3C\uCCB4\uC640 \uC5D4\uD2F0\uD2F0\uB85C \uACB9\uCE68\uC744 \uBCF8\uB2E4. \uAE30\uBCF8 true.")
+      }
+    },
+    onStack(
+      shared,
+      {},
+      async (deps, args, extra) => withAbortSignals(
+        [deps.session.abortController.signal, extra?.signal],
+        async (signal) => jsonContent(await runEdenPlace(deps, args, signal))
+      )
+    )
+  );
+  server.registerTool(
+    "arma_eden_edit",
+    {
+      title: "Eden \uC5D0\uB514\uD130 \uC5D4\uD2F0\uD2F0 \uACE0\uCE58\uAE30",
+      description: "\uC5D0\uB514\uD130 \uC5D4\uD2F0\uD2F0\uB97C \uC62E\uAE30\uACE0(at, by, on, beside), \uB3CC\uB9AC\uACE0(dir, turn, face, alignWith), \uB192\uC774\uB97C \uB9DE\uCD94\uACE0(ground, z), \uC774\uB984\uC744 \uBC14\uAFB8\uACE0(name), \uC9C0\uC6B4\uB2E4(delete). \uC0AC\uC6A9\uC790\uAC00 \uC694\uCCAD\uD588\uC744 \uB54C\uB9CC \uC4F4\uB2E4. undo \uB294 \uC5D0\uB514\uD130 \uC2E4\uD589 \uCDE8\uC18C\uB97C \uADF8\uB9CC\uD07C \uB204\uB978\uB2E4. \uACB0\uACFC changed \uB294 \uACE0\uCE5C \uB4A4 \uB2E4\uC2DC \uC7B0 \uC904\uC774\uACE0 overlaps \uB294 \uB458\uB808\uC640\uC758 \uC0C1\uC790 \uACB9\uCE68\uC774\uB2E4. \uD638\uCD9C \uD55C \uBC88\uC774 \uC2E4\uD589 \uCDE8\uC18C \uD55C \uB2E8\uACC4\uB2E4. " + AXES_NOTE,
+      inputSchema: {
+        stack: STACK_INPUT,
+        ops: external_exports.array(
+          external_exports.object({
+            id: ID,
+            at: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC0C8 \uC0C1\uC790 \uC911\uC2EC [x, y] \uB97C \uC9C0\uBA74\uC5D0, \uB610\uB294 [x, y, z] \uBC14\uB2E5 ASL."),
+            by: external_exports.array(external_exports.number()).min(2).max(3).optional().describe("\uC9C0\uAE08 \uC790\uB9AC\uC5D0\uC11C [dx, dy(, dz)] m \uB9CC\uD07C(\uC6D4\uB4DC \uCD95)."),
+            ...PLACEMENT_FIELDS,
+            turn: external_exports.number().optional().describe("\uC9C0\uAE08 \uBC29\uD5A5\uC5D0 \uB354\uD560 \uAC01(\uB3C4). \uC591\uC218\uB294 \uC2DC\uACC4 \uBC29\uD5A5."),
+            z: external_exports.number().optional().describe("\uC704\uCE58\uB294 \uADF8\uB300\uB85C \uB450\uACE0 \uBC14\uB2E5\uC744 \uC774 \uB192\uC774(ASL)\uC5D0."),
+            name: external_exports.string().optional().describe("\uC0C8 \uBCC0\uC218 \uC774\uB984. \uBE48 \uBB38\uC790\uC5F4\uC774\uBA74 \uC9C0\uC6B4\uB2E4."),
+            delete: external_exports.boolean().optional().describe("true \uBA74 \uC9C0\uC6B4\uB2E4.")
+          })
+        ).max(MAX_OPS).optional(),
+        undo: external_exports.number().int().min(1).max(50).optional().describe("\uC5D0\uB514\uD130 \uC2E4\uD589 \uCDE8\uC18C \uD69F\uC218. ops \uC640 \uD568\uAED8 \uC8FC\uC9C0 \uC54A\uB294\uB2E4."),
+        check: external_exports.boolean().optional().describe("\uB458\uB808\uC758 \uB9F5 \uBB3C\uCCB4\uC640 \uC5D4\uD2F0\uD2F0\uB85C \uACB9\uCE68\uC744 \uBCF8\uB2E4. \uAE30\uBCF8 true.")
+      }
+    },
+    onStack(
+      shared,
+      {},
+      async (deps, args, extra) => withAbortSignals(
+        [deps.session.abortController.signal, extra?.signal],
+        async (signal) => jsonContent(await runEdenEdit(deps, args, signal))
+      )
+    )
+  );
+}
+
 // src/mcp/server.ts
 var SERVER_INSTRUCTIONS = "Arma-MCP runs Arma 3 stacks; tools take stack (default 'default'). Call arma_status first unless it is fresh. Use arma_play/arma_launch* to start a requested runtime, arma_mission_info for state, arma_zeus_find for Zeus names, arma_exec with verify for SQF, arma_watch for waits, arma_rpt_* and arma_capture for evidence. SQF needs an active mission bridge; do not launch or mutate for source-only work. " + BROADCAST_POLICY_EN;
 var ALL_TOOL_NAMES = [
@@ -48699,7 +49879,12 @@ var ALL_TOOL_NAMES = [
   "arma_tacmap_mark",
   "arma_tacmap_open",
   "arma_zeus_find",
-  "arma_zeus_module"
+  "arma_zeus_module",
+  "arma_eden_scene",
+  "arma_eden_find",
+  "arma_eden_look",
+  "arma_eden_place",
+  "arma_eden_edit"
 ];
 function gatedHost(server, disabled) {
   if (disabled.size === 0) return server;
@@ -48738,6 +49923,7 @@ function buildMcpServer(deps) {
   registerCaptureTool(host, deps);
   registerTacMapTools(host, deps);
   registerZeusTools(host, deps);
+  registerEdenTools(host, deps);
   return server;
 }
 
@@ -50367,6 +51553,7 @@ function emptySnapshot() {
     aceComponents: [],
     tacmap: null,
     tacmapZeusTool: null,
+    editor: null,
     missionTime: 0,
     date: [],
     fps: 0,
@@ -50470,6 +51657,7 @@ var TelemetryStore = class {
     if (typeof m.tacmapZeusTool !== "undefined") {
       this.snap.tacmapZeusTool = Boolean(m.tacmapZeusTool);
     }
+    if (typeof m.editor !== "undefined") this.snap.editor = Boolean(m.editor);
   }
   onTelemetry(m) {
     this.snap.world = String(m.world ?? this.snap.world);
@@ -50550,6 +51738,10 @@ var TelemetryStore = class {
   /** AHC_ZeusTool 로드 여부(무전 자막 사운드). null = 미상. */
   tacmapZeusTool() {
     return this.snap.tacmapZeusTool;
+  }
+  /** Eden 에디터 브리지 연결인지. null = 미상(구버전 PBO). */
+  editor() {
+    return this.snap.editor;
   }
 };
 
@@ -51026,7 +52218,7 @@ var PlayOrchestrator = class {
       true,
       missionInfo.origin === "scaffolded" ? `scaffolded ${missionInfo.template}` : `given ${missionInfo.ref}`
     );
-    const finish = (r) => ({
+    const finish2 = (r) => ({
       ...r,
       mode,
       dryRun: !!opts.dryRun,
@@ -51035,7 +52227,7 @@ var PlayOrchestrator = class {
       warnings,
       totalMs: Date.now() - startedAt
     });
-    return mode === "sp" ? await this.playSp(opts, missionInfo, steps, warnings, finish, signal) : await this.playMp(opts, missionInfo, steps, warnings, finish, signal);
+    return mode === "sp" ? await this.playSp(opts, missionInfo, steps, warnings, finish2, signal) : await this.playMp(opts, missionInfo, steps, warnings, finish2, signal);
   }
   /** mission 을 주면 그대로 쓰고, 안 주면 최소 테스트 미션을 즉석에서 만든다. */
   prepareMission(opts) {
@@ -51070,7 +52262,7 @@ var PlayOrchestrator = class {
       position: scaffolded.position
     };
   }
-  async playSp(opts, missionInfo, steps, warnings, finish, signal) {
+  async playSp(opts, missionInfo, steps, warnings, finish2, signal) {
     const launchStartedAt = Date.now();
     const launch = await this.launcher.launch({
       mission: missionInfo.ref,
@@ -51086,7 +52278,7 @@ var PlayOrchestrator = class {
     if (launch.warning) warnings.push(launch.warning);
     if (opts.dryRun) {
       steps.add("plan", true, "dryRun \u2014 \uAC8C\uC784\uC744 \uC2E4\uD589\uD558\uC9C0 \uC54A\uC558\uB2E4");
-      return finish({
+      return finish2({
         ok: launch.ok,
         error: launch.error,
         phase: "mission",
@@ -51096,7 +52288,7 @@ var PlayOrchestrator = class {
     }
     steps.add("launched", launch.ok, launch.ok ? `pid ${launch.pid ?? "?"}` : launch.error);
     if (!launch.ok) {
-      return finish({
+      return finish2({
         ok: false,
         error: launch.error ?? "Arma \uC2E4\uD589 \uC2E4\uD328",
         phase: "mission",
@@ -51122,7 +52314,7 @@ var PlayOrchestrator = class {
       wait.verdict.inGame,
       wait.verdict.inGame ? `missionTime ${wait.verdict.missionTime}` : wait.verdict.reason
     );
-    return finish({
+    return finish2({
       ok: wait.verdict.inGame,
       error: wait.verdict.inGame ? void 0 : this.waitError(wait, opts.bridgeReadyTimeoutMs ?? DEFAULT_SP_BRIDGE_TIMEOUT_MS),
       phase: wait.verdict.inGame ? "in-game" : wait.bridgeElapsedMs !== null ? "bridge" : "launched",
@@ -51132,7 +52324,7 @@ var PlayOrchestrator = class {
       nextSteps: wait.verdict.inGame ? "\uC778\uAC8C\uC784 \uD655\uC778\uB428. arma_exec \uC640 arma_capture \uB97C \uC4F8 \uC218 \uC788\uB2E4." : '\uBBF8\uC158\uC774 \uC544\uC9C1 \uC2DC\uC791\uB418\uC9C0 \uC54A\uC558\uB2E4. arma_status(waitFor:"game") \uC640 arma_rpt_read \uB85C \uD655\uC778\uD558\uB77C.'
     });
   }
-  async playMp(opts, missionInfo, steps, warnings, finish, signal) {
+  async playMp(opts, missionInfo, steps, warnings, finish2, signal) {
     const autoSlot = opts.autoSlot ?? true;
     const clientCount = Math.max(1, opts.clients ?? 1);
     const roles = Array.from({ length: clientCount }, (_, i) => opts.roles?.[i] ?? null);
@@ -51165,7 +52357,7 @@ var PlayOrchestrator = class {
     if (mp.warning) warnings.push(mp.warning);
     if (opts.dryRun) {
       steps.add("plan", true, "dryRun \u2014 \uC11C\uBC84\uB3C4 \uD074\uB77C\uC774\uC5B8\uD2B8\uB3C4 \uC2E4\uD589\uD558\uC9C0 \uC54A\uC558\uB2E4");
-      return finish({
+      return finish2({
         ok: mp.ok,
         error: mp.error,
         phase: "mission",
@@ -51196,7 +52388,7 @@ var PlayOrchestrator = class {
     if (mp.client) steps.add("client", mp.client.launched, `pid ${mp.client.pid ?? "?"}`);
     if (mp.lobby) steps.add("lobby", mp.lobby.reached, mp.lobby.line);
     if (!mp.ok) {
-      return finish({
+      return finish2({
         ok: false,
         error: mp.error ?? "\uBA40\uD2F0\uD50C\uB808\uC774 \uC2E4\uD589 \uC2E4\uD328",
         phase: mp.lobby?.reached ? "lobby" : mp.client?.launched ? "client" : mp.bridgeReady ? "serverBridge" : mp.server.ready ? "server" : "mission",
@@ -51246,7 +52438,7 @@ var PlayOrchestrator = class {
         "\uC790\uB3D9 \uBC30\uC815\uC758 \uC99D\uAC70(\uC11C\uBC84 RPT \uC758 \uD6C5 \uC904\uACFC \uC11C\uBC84\uC5D0\uC11C \uC77D\uC740 \uC5ED\uD560)\uB97C \uCC3E\uC9C0 \uBABB\uD588\uB2E4. autoSlot.log \uC640 \uC11C\uBC84 RPT \uB97C \uD655\uC778\uD558\uB77C."
       );
     }
-    return finish({
+    return finish2({
       ok: wait.verdict.inGame,
       error: wait.verdict.inGame ? void 0 : this.waitError(wait, opts.inGameTimeoutMs ?? DEFAULT_IN_GAME_TIMEOUT_MS),
       phase: wait.verdict.inGame ? "in-game" : "lobby",
@@ -54099,7 +55291,7 @@ function runWithLock(input2) {
     io.writeCache({ ...cache3 ?? {}, lastCheck: now, host: adapter.name, lastResult: "no-marketplace" });
     return outcome({ ...base, result: "no-marketplace" });
   }
-  const finish = (result, extra = {}) => {
+  const finish2 = (result, extra = {}) => {
     const failStreak = result === "no-remote" ? (cache3?.failStreak ?? 0) + 1 : 0;
     const next = {
       ...cache3 ?? {},
@@ -54130,8 +55322,8 @@ function runWithLock(input2) {
     const args = adapter.installArgs(owner);
     ran.push(args);
     const result = io.hostCli(adapter.cli, args);
-    if (!result.ok) return finish("install-failed", { latestVersion: toVersion });
-    return finish("updated", {
+    if (!result.ok) return finish2("install-failed", { latestVersion: toVersion });
+    return finish2("updated", {
       latestVersion: toVersion,
       notify: { fromVersion: owner.installedVersion, toVersion }
     });
@@ -54143,7 +55335,7 @@ function runWithLock(input2) {
   if (stage0.kind === "install") return install(stage0.toVersion);
   let snapshotSha = null;
   if (owner.sourceUrl) {
-    if (!isSafeRemoteUrl(owner.sourceUrl)) return finish("unsafe-name");
+    if (!isSafeRemoteUrl(owner.sourceUrl)) return finish2("unsafe-name");
     const remote = io.git(["ls-remote", owner.sourceUrl, "HEAD"]);
     const remoteSha = remote.ok ? parseSha(remote.stdout) : null;
     if (owner.snapshotRoot) {
@@ -54153,7 +55345,7 @@ function runWithLock(input2) {
     const stage1 = planRemoteStage({ remoteSha, snapshotSha, force });
     if (stage1.kind === "skip") {
       if (stage1.result !== "no-remote") {
-        return finish(stage1.result, { snapshotSha: remoteSha ?? snapshotSha });
+        return finish2(stage1.result, { snapshotSha: remoteSha ?? snapshotSha });
       }
       const failStreak = (cache3?.failStreak ?? 0) + 1;
       const notice = urlMismatchNotice({
@@ -54164,23 +55356,23 @@ function runWithLock(input2) {
         failStreak,
         recoveryCommands: adapter.recoveryCommands(owner.marketplace, owner.manifestUrl ?? "", owner.pluginName)
       });
-      return finish("no-remote", { notice });
+      return finish2("no-remote", { notice });
     }
   }
   const syncArgs = adapter.syncArgs(owner);
   if (!syncArgs) {
-    return finish(stage0.result, { snapshotSha });
+    return finish2(stage0.result, { snapshotSha });
   }
   ran.push(syncArgs);
   const synced = io.hostCli(adapter.cli, syncArgs);
-  if (!synced.ok) return finish("sync-failed", { snapshotSha });
+  if (!synced.ok) return finish2("sync-failed", { snapshotSha });
   const refreshedSha = owner.snapshotRoot ? parseSha(io.git(["-C", owner.snapshotRoot, "rev-parse", "HEAD"]).stdout) : null;
   const stage2 = planInstallStage({
     installedVersion: owner.installedVersion,
     snapshotVersion: snapshotVersion()
   });
   if (stage2.kind === "skip") {
-    return finish(stage2.result, { snapshotSha: refreshedSha ?? snapshotSha });
+    return finish2(stage2.result, { snapshotSha: refreshedSha ?? snapshotSha });
   }
   const installed = install(stage2.toVersion);
   return installed;
@@ -54554,7 +55746,7 @@ async function reportStartupFailure(reason, stdin, stdout) {
   const closed = new Promise((resolve) => {
     resolveClosed = resolve;
   });
-  const finish = async () => {
+  const finish2 = async () => {
     if (finished) return;
     finished = true;
     try {
@@ -54564,20 +55756,20 @@ async function reportStartupFailure(reason, stdin, stdout) {
     resolveClosed();
   };
   const onStdinEnd = () => {
-    void finish();
+    void finish2();
   };
   stdin.once("end", onStdinEnd);
   stdin.once("close", onStdinEnd);
   stdio.onmessage = (message) => {
     const failure2 = rpcFailure(message, reason);
     if (!failure2) return;
-    void stdio.send(failure2).catch(() => void 0).then(() => finish());
+    void stdio.send(failure2).catch(() => void 0).then(() => finish2());
   };
   stdio.onerror = (error62) => {
     log.error("[relay] stdio transport error: " + error62.message);
   };
   stdio.onclose = () => {
-    void finish();
+    void finish2();
   };
   await stdio.start();
   await closed;
@@ -56237,7 +57429,7 @@ var INTERVAL_MIN_MS = 50;
 var INTERVAL_MAX_MS = 5e3;
 var WATCH_STOP_TIMEOUT_MS = 1500;
 var WATCH_LABEL = "cli-wait";
-var KINDS = ["rpt", "game", "dedicated", "sqf"];
+var KINDS2 = ["rpt", "game", "dedicated", "sqf"];
 var KIND_OPTIONS = {
   rpt: ["source", "file", "since"],
   game: [],
@@ -56301,7 +57493,7 @@ function parseWaitArgs(argv) {
   if (kindText === void 0) {
     throw usageError("\uBB34\uC5C7\uC744 \uAE30\uB2E4\uB9B4\uC9C0 \uC5C6\uB2E4. rpt, game, dedicated, sqf \uC911 \uD558\uB098\uB97C \uC900\uB2E4.");
   }
-  if (!KINDS.includes(kindText)) {
+  if (!KINDS2.includes(kindText)) {
     throw usageError(`\uAE30\uB2E4\uB9B4 \uC218 \uC5C6\uB294 \uC885\uB958\uB2E4: ${kindText}. rpt, game, dedicated, sqf \uC911 \uD558\uB098\uB2E4.`);
   }
   const kind = kindText;

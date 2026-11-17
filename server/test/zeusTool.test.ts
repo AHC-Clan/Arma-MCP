@@ -272,3 +272,19 @@ test('module: 관찰 대기 중 세션이 닫히면 바로 끝낸다', async () 
   assert.equal(res.ok, false);
   assert.ok(Date.now() - t0 < 5000);
 });
+
+test('Eden 에디터 연결이면 Zeus 툴은 게임에 보내지 않고 arma_eden_find 로 안내한다', async () => {
+  const { gateway, deps } = makeDeps(() => null, { multiplayer: false, dedicated: false, editor: true } as {
+    multiplayer: boolean;
+    dedicated: boolean;
+  });
+  const f = await runZeusFind(deps, { source: 'palette', query: 'hunter' });
+  assert.equal(f.ok, false);
+  assert.equal(f.source, 'palette');
+  assert.match(String(f.error), /Eden 에디터/);
+  assert.match(String(f.hint), /arma_eden_find/);
+  const m = await runZeusModule(deps, { module: 'ModuleCAS_F' }, new AbortController().signal);
+  assert.equal(m.ok, false);
+  assert.match(String(m.hint), /arma_eden_place/);
+  assert.equal(gateway.sent.length, 0);
+});

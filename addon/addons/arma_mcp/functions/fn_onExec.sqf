@@ -6,7 +6,9 @@
  *
  * Argument: _data (the callback data string).
  */
-if (!isServer) exitWith {};
+// The editor bridge (fn_initEditor) routes here too. isServer in the editor is
+// unverified, so is3DEN lets it through either way.
+if (!isServer && {!is3DEN}) exitWith {};
 params [["_data", ""]];
 
 private _arr = parseSimpleArray _data;

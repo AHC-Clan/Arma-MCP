@@ -6,7 +6,9 @@
  *
  * Argument: [_machine, _reqId, _label, _ret].
  */
-if (!isServer) exitWith {};
+// The editor bridge (fn_initEditor) routes here too. isServer in the editor is
+// unverified, so is3DEN lets it through either way.
+if (!isServer && {!is3DEN}) exitWith {};
 params [["_machine", "?"], ["_reqId", ""], ["_label", ""], ["_ret", ""]];
 
 [_machine, _reqId, _label, _ret] call AHC_ArmaMCP_fnc_pushResult;

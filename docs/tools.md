@@ -10,8 +10,10 @@
 클라이언트가 `notifications/cancelled` 로 호출 하나를 취소하면 그 호출의 대기가 멈춘다. 세션은 그대로다.
 cli 세션은 응답 전에 연결이 끊겨도 같다. 그때는 세션도 닫힌다.
 
-- 멈추는 툴: `arma_exec`, `arma_watch`, `arma_status` 의 `waitFor`, `arma_rpt_wait`, `arma_launch`, `arma_launch_mp`, `arma_launch_server`, `arma_play`, `arma_scaffold_mission`, `arma_kill`, `arma_zeus_find`, `arma_zeus_module`.
+- 멈추는 툴: `arma_exec`, `arma_watch`, `arma_status` 의 `waitFor`, `arma_rpt_wait`, `arma_launch`, `arma_launch_mp`, `arma_launch_server`, `arma_play`, `arma_scaffold_mission`, `arma_kill`, `arma_zeus_find`, `arma_zeus_module`, `arma_eden_scene`, `arma_eden_find`, `arma_eden_look`, `arma_eden_place`, `arma_eden_edit`.
 - 취소된 `arma_zeus_module` 은 이미 만든 모듈을 지우지 않는다. 결과 관찰만 멈춘다.
+- 취소된 `arma_eden_place`, `arma_eden_edit` 는 이미 보낸 편집을 되돌리지 않는다. 에디터의 실행 취소로 되돌린다.
+  `arma_eden_look` 은 취소돼도 카메라를 원래 자리로 되돌리는 호출을 보낸다.
 - 실행 lease 를 쥔 툴은 멈출 때 lease 를 푼다. 이미 띄운 게임 프로세스는 끄지 않는다.
 - 취소된 `arma_exec` 는 `capture` 를 찍지 않는다.
 - `arma_watch` 는 데몬 쪽 대기만 멈춘다. 게임 안의 루프는 제 `timeoutMs` 까지 돈다. 바로 멈추려면 `watchId` 를 정해 두고 `stop` 을 보낸다.
@@ -292,6 +294,10 @@ palette 색인은 Zeus 처럼 curator 의 `curatorAddons` 에 든 `CfgPatches >>
 - 여럿이면 mission 과 palette 는 첫 사람의 머신을 쓰고 `note` 로 알린다. selected 는 `on` 을 요구한다.
 - 없으면 mission 과 palette 는 서버에서 계산하고 서버 언어일 수 있다고 알린다. selected 는 오류다.
 
+Eden 에디터 연결(`arma_status` 의 `mission.editor:true`, 게임의 `is3DEN`)이면 `arma_zeus_find` 와 `arma_zeus_module` 은 게임에 보내지 않고
+`ok:false` 와 `arma_eden_find`, `arma_eden_place` 안내를 돌려준다. 에디터에는 Zeus 사용자가 없어 위 규칙대로면 서버에서 Zeus 기준 목록을 읽게 되는데,
+그 목록(`scopeCurator == 2`)은 에디터 자산 패널(`scope == 2`)과 달라 에디터 전용 모듈이 빠지고 Zeus 전용 모듈이 섞인다.
+
 결과는 인게임 500자 캡 안에서 행 단위 페이지로 나눠 받는다. 쪽마다 exec 가 한 번 더 돈다(`exec.count`).
 
 ```
@@ -346,6 +352,176 @@ Zeus 모듈을 Zeus 에서 놓은 것과 같은 경로로 실행한다. 사용�
 arma_zeus_module { "module": "주변 10m 완전 치료", "target": "2:345" }
 arma_zeus_module { "module": "PH_Mission_VarName", "target": "2:9" }
 arma_zeus_module { "module": "번개", "dryRun": true }
+```
+
+## Eden 에디터 툴: `arma_eden_scene`, `arma_eden_find`, `arma_eden_look`, `arma_eden_place`, `arma_eden_edit`
+
+Eden 에디터를 연 게임에서 엔티티를 읽고, 자산 패널에서 찾고, 보고, 놓고, 고친다. 미션이 아니라 에디터에 붙은 브리지가 필요하다.
+Zeus 툴과 나누는 기준은 게임의 `is3DEN`(`arma_status` 의 `mission.editor`)이다. 에디터에서는 `arma_eden_*` 만 되고 Zeus 툴은 거절한다.
+애드온의 `Cfg3DEN >> EventHandlers` 가 에디터를 열 때 브리지를 켜고(`fn_initEditor`), 미리보기를 시작하면 끄고(`fn_stopEditor`),
+미리보기가 끝나면 다시 켠다. 미리보기 동안은 보통 미션 브리지가 돈다. `arma_status` 의 `mission.editor` 가 `true` 면 에디터 연결이다.
+
+에디터 연결의 제약:
+
+- `arma_exec` 는 `mode: server` 만 된다. `all` 과 `client` 는 `ERROR: mode '...' is unavailable in the Eden editor` 로 끝난다.
+- 플레이어가 없고 `missionTime` 이 흐르지 않는다. 저장하지 않은 새 미션은 `mission` 이 빈 문자열이다.
+- 바뀐 내용은 사용자가 에디터에서 저장하기 전까지 미션 파일에 쓰이지 않는다. 툴은 저장하지 않는다.
+
+좌표는 Arma 월드다. +X 동쪽, +Y 북쪽, 높이는 해수면 기준(ASL) m 이고 방위각은 북쪽에서 시계 방향 도다.
+물체의 앞은 모델 +Y 다. 툴 설명에도 같은 문장을 넣어 LLM 이 블렌더 같은 다른 축과 섞지 않게 한다.
+
+### 설계
+
+블렌더 MCP(ahujasid/blender-mcp, Blender Lab 공식 MCP, blender-ai-mcp)와 장면 배치 연구(Holodeck, LayoutVLM, VULCAN)에서 가져왔다.
+
+- 판정은 잰 값으로 한다. 엔티티 줄마다 지면 판정(`ground`)을, 결과마다 상자 겹침(`overlaps`)을 붙인다.
+  화면(`arma_eden_look`)은 확인용이다. VULCAN 은 판정 없는 Blender-MCP 배치에서 단계의 46%에 겹침, 77%에 뜸을 쟀다.
+- 좌표보다 관계를 받는다. `on`, `beside`, `face`, `alignWith` 를 받아 게임에서 잰 크기로 서버가 좌표를 푼다.
+  LayoutVLM 은 관계를 풀지 않고 LLM 이 자세를 바로 찍게 하자 점수가 58.8 에서 6.7 로 떨어졌다.
+- 고친 뒤 바로 다시 재서 돌려준다. 확인 호출을 따로 하지 않아도 된다.
+- 호출 한 번이 에디터 실행 취소 한 단계다(`collect3DENHistory`, BI 의 `fn_3den_onKeyDown` 과 같은 방식).
+- 클래스가 틀리면 아무것도 만들지 않고 후보를 돌려준다. 후보는 `arma_eden_find` 와 같은 자산 색인에서 찾는다.
+- 좌표 `at` 은 모든 툴에서 상자 중심이다. 위치 속성은 모델 원점이라, 만들거나 옮긴 뒤 상자 중심을 재서 그 자리로 맞춘다.
+  원점이 상자 중심에서 벗어난 모델(컨테이너 숙소 `Land_Cargo_House_V1_F` 는 약 1 m)도 `beside` 와 `on` 이 어긋나지 않는다.
+
+잰 값은 게임이 `toFixed 2` 로 찍은 문자열로 온다. `str` 은 유효숫자 6자리라 Altis 좌표 `12345.67` 이 `12345.7` 이 된다.
+결과는 Zeus 툴과 같은 쪽 나누기(`AHC_MCP_pg`)로 500자 캡을 넘는다.
+
+### 엔티티 줄
+
+`arma_eden_scene` 의 `entities`, `arma_eden_place` 의 `created`, `arma_eden_edit` 의 `changed` 가 같은 모양이다.
+
+| 필드 | 설명 |
+|---|---|
+| `id` | Eden 엔티티 id(`get3DENEntityID`). 다른 툴에 이 값을 준다 |
+| `kind` | `unit`, `vehicle`, `object`, `logic`(모듈), `trigger`, `marker` |
+| `class`, `name`, `layer` | 클래스, 변수 이름(마커는 마커 이름), 레이어 이름 |
+| `at`, `dir` | 상자 중심 `[x, y]` 와 방위각 |
+| `size` | `[폭, 길이, 높이]` m. `boundingBoxReal` 의 모델 축 상자다(폭은 오른쪽, 길이는 앞) |
+| `z.bottom`, `z.attr` | 상자 바닥 높이(ASL), 에디터 위치 속성의 z(에디터 화면에 보이는 높이) |
+| `ground` | `ground`, `floating <틈 m>`, `sunk <깊이 m>` |
+| `slope` | 네 모서리 틈이 0.3 m 이상 벌어지면 그 폭. 경사면이다 |
+| `tilt`, `water`, `selected` | 1도 이상 기울면 각, 물 위, 에디터에서 선택됨 |
+
+지면 판정: 상자 아래 네 모서리마다 상자 위에서 아래로 선을 쏴(`lineIntersectsSurfaces`, 자기는 뺀다) 처음 닿은 표면까지 잰다.
+표면은 지형(`getTerrainHeightASL`)보다 낮지 않다. 가장 작은 틈이 0.05 m 를 넘으면 `floating`, 어느 모서리든 0.05 m 보다 들어가 있으면 `sunk` 다.
+경사면에 똑바로 선 건물은 오르막 쪽이 묻혀 `sunk` 와 `slope` 가 함께 나온다. 게임에서도 흔한 배치다.
+다른 물체가 모서리 위로 겹쳐 있으면 그 물체 윗면에 닿아 `sunk` 가 된다.
+
+겹침: 방향이 다른 상자끼리 분리축으로 수평 겹침 깊이를 잰다. 높이가 0.05 m 이하로 겹치면(위에 올려 둔 것) 치지 않는다.
+상자끼리의 판정이라 실제 메시가 닿았는지는 아니다. 맵 물체는 `b` 가 `map:<클래스>` 다(나무는 모델 이름).
+
+### arma_eden_scene
+
+| 파라미터 | 설명 |
+|---|---|
+| `ids` | 이 id 들만 |
+| `kind` | 하나나 배열 |
+| `query` | 클래스, 변수 이름, 레이어, 표시 이름 조각(대소문자 무시) |
+| `layer` | 이 레이어 이름만(대소문자 무시, 정확히 같은 이름) |
+| `near`, `radius` | `[x, y]` 둘레 반경(기본 50 m) 안의 것만 가까운 순으로 |
+| `selected` | 에디터에서 지금 선택한 것만 |
+| `limit` | 기본 30, 최대 100 |
+
+출력: `{ ok, world, mission, matched, returned, selectedCount, entities, overlaps, note, exec }`. `overlaps` 는 돌려준 엔티티끼리만 본다.
+
+### arma_eden_find
+
+에디터 오른쪽 자산 패널(유닛, 차량, 빈 물체, 모듈, 그룹 편성, 마커)에서 표시 이름이나 클래스 조각으로 찾는다.
+사용자가 물체를 화면에 보이는 이름("캠핑 테이블", "지형 물체 숨기기")으로 말하면 `arma_eden_place` 전에 부른다. 게임을 바꾸지 않는다.
+
+| 파라미터 | 설명 |
+|---|---|
+| `query` | 표시 이름, 클래스, 경로 조각(대소문자 무시). 낱말이 모두 들어 있어도 맞는다. 비우면 목록 |
+| `kind` | 하나나 배열. `unit`, `vehicle`, `object`, `module`, `group`, `marker` |
+| `side` | `WEST`, `EAST`, `GUER`, `CIV`, `EMPTY`(빈 물체) |
+| `limit` | 기본 20, 최대 100 |
+
+출력: `{ ok, language, total, returned, results, note, exec }`. 행: `{ kind, label, class, path, side, place, is3DEN, zeus, sqf, score }`.
+
+- `place` 는 `arma_eden_place` 의 항목에 그대로 넣는 `class` 와 `type` 이다(모듈은 `type:'logic'`, 마커는 `type:'marker'`).
+- 모듈의 `is3DEN` 은 에디터 속성 창을 쓰는 모듈(config `is3DEN = 1`), `zeus` 는 Zeus 목록에도 있는 것(`scopeCurator == 2`)이다.
+- 그룹 편성은 `place` 가 없고 `sqf` 가 `configFile >> "CfgGroups" >> ...` 식이다. `create3DENComposition` 에 쓴다.
+- 점수는 `arma_zeus_find` palette 와 같다. 정확 일치 100, 앞부분 60, 포함 40, 낱말이 모두 들어 있으면 25.
+
+색인 기준이 Zeus palette 와 다르다.
+
+| | Zeus palette | `arma_eden_find` |
+|---|---|---|
+| 담는 것 | curator 의 `CfgPatches >> units[]` 중 `scopeCurator == 2` | `CfgVehicles` 중 `scope == 2`, `CfgGroups`, `CfgMarkers` 중 `scope == 2` |
+| 경로 | 세력 > 하위 분류, 모듈은 카테고리 | 유닛과 차량은 세력 > `editorSubcategory`, 빈 물체는 `editorCategory` > `editorSubcategory`, 모듈은 카테고리 |
+| 캐시 | 그 머신의 `missionNamespace`(미션 동안) | `uiNamespace` 의 `AHC_MCP_ea`(게임 동안. 모드 구성은 게임을 다시 켜야 바뀐다) |
+
+에디터 패널의 분류 기준은 BI 위키의 [Eden Editor: Object Categorization](https://community.bistudio.com/wiki/Eden_Editor:_Object_Categorization) 이다.
+첫 호출은 색인을 만드느라 한 프레임 멈출 수 있다. 실제 패널 목록과 같은지는 `docs/testing.md` 에서 본다.
+
+### arma_eden_look
+
+대상이 화면에 들어오게 에디터 카메라(`get3DENCamera`)를 옮겨 찍는다. 이미지가 먼저 오고 JSON 이 뒤에 온다.
+
+| 파라미터 | 설명 |
+|---|---|
+| `ids` 또는 `at`, `radius` | 담을 엔티티, 또는 점과 반경(기본 15 m) |
+| `views` | `top`, `front`(대상의 앞에서), `side`(대상의 오른쪽에서), `iso`(앞 오른쪽 위 35도). 기본 `["iso","top"]` |
+| `restore` | 끝나고 카메라를 원래 자리로. 기본 true |
+| `delayMs`, `maxWidth` | 옮긴 뒤 찍기 전 대기(기본 400), 이미지 폭(기본 1024) |
+
+`shots[].labels` 는 엔티티 상자 중심이 화면 어디에 있는지다(`worldToScreen`, 폭과 높이에 대한 0~1 비율). 화면 밖이면 `onScreen:false`.
+id 를 여럿 주면 front 는 남쪽에서 북쪽을 본다. 카메라는 지형 위 1.5 m 아래로 내려가지 않는다.
+에디터 패널이 화면 가장자리를 가린다. 판정은 이미지가 아니라 `ground` 와 `overlaps` 로 한다.
+
+### arma_eden_place
+
+사용자가 배치를 요청했을 때만 쓴다. `items` 는 20개까지다.
+
+| 항목 필드 | 설명 |
+|---|---|
+| `class` | CfgVehicles 클래스. 마커는 CfgMarkers |
+| `type` | `object`(기본, 물체, 차량, 유닛), `logic`(모듈), `trigger`, `marker` |
+| `at` | 상자 중심. `[x, y]` 는 지면에, `[x, y, z]` 는 바닥을 그 높이(ASL)에 |
+| `on`, `offset` | 그 엔티티 위에. 높이는 물체 중심 아래로 쏜 선이 그 엔티티에 닿은 곳(없으면 상자 윗면). `offset` 은 그 엔티티 축 기준 `[오른쪽, 앞]` m |
+| `beside` | `{ id, side, gap, offset }`. 그 엔티티의 `front`, `back`, `left`, `right` 에 상자끼리 맞닿게(`gap` m 띄워) 놓는다 |
+| `dir`, `face`, `alignWith` | 방위각, 그 id 나 `[x, y]` 를 바라보게, 그 엔티티와 같은 방향으로. 없으면 0, `beside` 는 그 엔티티 방향 |
+| `ground` | false 면 높이를 건드리지 않는다(에디터 스냅 그대로) |
+| `name` | 변수 이름 |
+
+`at`, `on`, `beside` 중 하나가 필요하다. 순서:
+
+1. `on`, `beside`, `face`, `alignWith` 의 엔티티를 잰다. 없는 id 가 있으면 멈춘다.
+2. 클래스가 있는지 보고 크기를 잰다. 크기는 지역 단순 물체(`createSimpleObject`)를 높이 2000 m 에 잠깐 만들어 재고 바로 지운다.
+   에디터 엔티티가 아니라 실행 취소 기록에 남지 않는다. 없는 클래스가 있으면 아무것도 만들지 않고 `unknown[].candidates` 를 돌려준다.
+   후보는 `arma_eden_find` 의 색인에서 `type` 에 맞는 종류로(물체는 유닛, 차량, 빈 물체) 클래스 이름을 찾은 다섯이다.
+3. 서버가 상자 중심과 방향을 푼다(`src/eden/edenRuntime.ts` 의 `solvePlacement`).
+4. `collect3DENHistory` 안에서 `create3DENEntity` 로 만들고, 방향을 맞추고, 상자 중심을 3의 자리로 옮기고, 높이를 맞춘다.
+   지면이면 가장 가까운 모서리가 표면에 닿게 내린다.
+   유닛의 지면은 에디터 스냅에 맡긴다. 사람 상자 바닥이 발바닥과 같지 않다.
+5. 만든 것과 둘레(상자 반지름 + 8 m 안의 맵 물체와 엔티티, 12개까지)를 다시 잰다.
+
+출력: `{ ok, created, failed, overlaps, note, exec }`. 기본으로 만든 것을 에디터에서 선택해 사용자에게 보여 준다(`select:false` 로 끈다).
+
+### arma_eden_edit
+
+| 연산 필드 | 설명 |
+|---|---|
+| `id` | 고칠 엔티티 |
+| `at`, `by`, `on`, `beside` | 새 자리. `by` 는 지금 자리에서 `[dx, dy(, dz)]` m(월드 축) |
+| `dir`, `turn`, `face`, `alignWith` | 새 방향. `turn` 은 지금 방향에 더한다 |
+| `ground`, `z` | 위치가 바뀌면 지면에 내린다. `ground:false` 는 그대로, `ground:true` 는 위치가 그대로여도 내린다. `z` 는 위치를 두고 바닥만 그 높이(ASL)에 |
+| `name` | 새 변수 이름. 빈 문자열이면 지운다 |
+| `delete` | 지운다(`delete3DENEntities`) |
+
+`ops` 는 30개까지다. `undo: n` 은 에디터 실행 취소(`do3DENAction "Undo"`)를 n 번 누르고, `ops` 와 함께 주지 않는다.
+출력: `{ ok, changed, deleted, missing, overlaps, note, exec }`.
+
+```
+arma_eden_scene { "near": [3520, 4380], "radius": 30 }
+arma_eden_find { "query": "캠핑 테이블", "kind": "object" }
+arma_eden_find { "kind": "module", "query": "지형" }
+arma_eden_place { "items": [{ "class": "Land_CncBarrier_F", "beside": { "id": 41, "side": "front", "gap": 0.2 } }] }
+arma_eden_place { "items": [{ "class": "Land_Can_V3_F", "on": 52, "offset": [0.3, 0] }] }
+arma_eden_edit { "ops": [{ "id": 60, "face": 41 }, { "id": 61, "by": [0, 2] }] }
+arma_eden_look { "ids": [41, 60, 61], "views": ["iso", "top"] }
+arma_eden_edit { "undo": 1 }
 ```
 
 ## arma_status — 상태

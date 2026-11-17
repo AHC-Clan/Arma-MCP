@@ -15,6 +15,7 @@ import { registerWebTools } from './tools/web.js';
 import { registerCaptureTool } from './tools/capture.js';
 import { registerTacMapTools } from './tools/tacmap.js';
 import { registerZeusTools } from './tools/zeus.js';
+import { registerEdenTools } from './tools/eden.js';
 import { BROADCAST_POLICY_EN } from './broadcastPolicy.js';
 import { ARMA_MCP_VERSION } from '../version.js';
 
@@ -50,6 +51,11 @@ export const ALL_TOOL_NAMES: readonly string[] = [
   'arma_tacmap_open',
   'arma_zeus_find',
   'arma_zeus_module',
+  'arma_eden_scene',
+  'arma_eden_find',
+  'arma_eden_look',
+  'arma_eden_place',
+  'arma_eden_edit',
 ];
 
 /**
@@ -100,6 +106,7 @@ export function buildMcpServer(deps: Deps): McpServer {
   registerCaptureTool(host, deps);
   registerTacMapTools(host, deps);
   registerZeusTools(host, deps);
+  registerEdenTools(host, deps);
 
   return server;
 }

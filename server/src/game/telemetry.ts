@@ -91,6 +91,11 @@ export interface MissionSnapshot {
   tacmap: boolean | null;
   /** AHC_ZeusTool 로드 여부(무전 자막의 사운드 유무만 결정). null = 미상. */
   tacmapZeusTool: boolean | null;
+  /**
+   * Eden 에디터 브리지(fn_initEditor)가 보낸 연결인지. null = 애드온이 필드를 보내지 않음(구버전 PBO).
+   * 에디터에는 플레이어가 없고 exec 는 server 모드만 된다. 새 미션은 missionName 이 비어 있다.
+   */
+  editor: boolean | null;
   missionTime: number;
   date: number[];
   fps: number;
@@ -133,6 +138,7 @@ function emptySnapshot(): MissionSnapshot {
     aceComponents: [],
     tacmap: null,
     tacmapZeusTool: null,
+    editor: null,
     missionTime: 0,
     date: [],
     fps: 0,
@@ -249,6 +255,7 @@ export class TelemetryStore {
     if (typeof m.tacmapZeusTool !== 'undefined') {
       this.snap.tacmapZeusTool = Boolean(m.tacmapZeusTool);
     }
+    if (typeof m.editor !== 'undefined') this.snap.editor = Boolean(m.editor);
   }
 
   private onTelemetry(m: GatewayFrame): void {
@@ -347,5 +354,10 @@ export class TelemetryStore {
   /** AHC_ZeusTool 로드 여부(무전 자막 사운드). null = 미상. */
   tacmapZeusTool(): boolean | null {
     return this.snap.tacmapZeusTool;
+  }
+
+  /** Eden 에디터 브리지 연결인지. null = 미상(구버전 PBO). */
+  editor(): boolean | null {
+    return this.snap.editor;
   }
 }
