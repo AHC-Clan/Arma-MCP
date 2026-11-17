@@ -56,8 +56,8 @@ export const PF = { canAttach: 1, attributeDialog: 2, opensDialog: 4 } as const;
 
 // ---------------------------------------------------------------- 공용 조각
 
-/** 문자열을 글자 단위로 자른다. count 가 바이트를 세더라도 toArray 는 글자를 센다. */
-const CUT =
+/** 문자열을 글자 단위로 자른다. count 가 바이트를 세더라도 toArray 는 글자를 센다. Eden 툴도 쓴다. */
+export const CUT =
   'private _cut = {params ["_s","_n"]; if (count _s > _n) then {toString ((toArray _s) select [0,_n])} else {_s}};';
 
 /**
@@ -106,8 +106,8 @@ function paginate(dropCols: number[], labelCol: number): string {
   );
 }
 
-/** 2쪽 이상이면 남은 쪽을 호출 키로 보관한다. 오래된 키는 PAGE_STORE_MAX 를 넘으면 버린다. */
-function storePages(key: string): string {
+/** 2쪽 이상이면 남은 쪽을 호출 키로 보관한다. 오래된 키는 PAGE_STORE_MAX 를 넘으면 버린다. Eden 툴도 쓴다. */
+export function storePages(key: string): string {
   return (
     'if (isNil "AHC_MCP_pg") then {AHC_MCP_pg = createHashMap}; ' +
     `if (count AHC_MCP_pg >= ${PAGE_STORE_MAX}) then {{AHC_MCP_pg deleteAt _x} forEach (keys AHC_MCP_pg)}; ` +

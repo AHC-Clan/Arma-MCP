@@ -27,7 +27,7 @@ test('MCP 공통 지침은 짧고 라이브 런타임 작업을 올바르게 라
   assert.match(SERVER_INSTRUCTIONS, /never for reports/);
 });
 
-test('MCP 도구 카탈로그는 23개 공개 도구를 그대로 유지한다', () => {
+test('MCP 도구 카탈로그는 27개 공개 도구를 그대로 유지한다', () => {
   assert.deepEqual(ALL_TOOL_NAMES, [
     'arma_exec',
     'arma_watch',
@@ -52,5 +52,9 @@ test('MCP 도구 카탈로그는 23개 공개 도구를 그대로 유지한다',
     'arma_tacmap_open',
     'arma_zeus_find',
     'arma_zeus_module',
+    'arma_eden_scene',
+    'arma_eden_look',
+    'arma_eden_place',
+    'arma_eden_edit',
   ]);
 });

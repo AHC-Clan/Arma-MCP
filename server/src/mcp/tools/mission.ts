@@ -10,7 +10,7 @@ export function registerMissionTool(server: ToolHost, shared: Deps): void {
     {
       title: 'Arma 미션 정보',
       description:
-        '진행 중 미션 정보(world, mission, briefing, players, time, fps, fpsMin, scripts, paused, focused)를 반환한다. ' +
+        '진행 중 미션 정보(world, mission, briefing, editor, players, time, fps, fpsMin, scripts, paused, focused)를 반환한다. ' +
         '기본은 서버가 캐시한 최근 텔레메트리(즉답, 프레임 프리즈에도 강건). ' +
         'fresh=true 면 게임에 즉시 갱신을 요청해 라운드트립 후 반환. 미접속 시 lastKnown 반환.',
       inputSchema: {
@@ -50,6 +50,8 @@ export function registerMissionTool(server: ToolHost, shared: Deps): void {
         aceComponents: deps.telemetry.aceComponents(),
         tacmap: deps.telemetry.tacmap(),
         tacmapZeusTool: deps.telemetry.tacmapZeusTool(),
+        // Eden 에디터 브리지면 true. 에디터에는 플레이어가 없고 missionTime 이 흐르지 않는다.
+        editor: snap.editor ?? null,
         missionTime: snap.missionTime,
         date: snap.date,
         fps: snap.fps,

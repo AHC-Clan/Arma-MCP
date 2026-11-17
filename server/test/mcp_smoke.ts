@@ -104,7 +104,7 @@ async function main(): Promise<void> {
   check(names.includes('arma_play'), 'arma_play 등록됨');
   check(names.includes('arma_zeus_find'), 'arma_zeus_find 등록됨');
   check(names.includes('arma_zeus_module'), 'arma_zeus_module 등록됨');
-  check(names.length === 23, `툴 23개 등록됨 (실제 ${names.length}: ${names.join(',')})`);
+  check(names.length === 27, `툴 27개 등록됨 (실제 ${names.length}: ${names.join(',')})`);
 
   // 플레이어 눈에 보이는 툴은 전부 "요청받았을 때만" 규칙을 달고 나가야 한다.
   const BROADCAST_TOOLS = [

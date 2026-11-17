@@ -9,7 +9,8 @@ class CfgPatches {
         // Deliberately NO cba_main requirement — the addon must load without CBA
         // and detect it at runtime (fn_hasCba).
         // A3_Ui_F so RscDisplayMain exists when this config adds its row.
-        requiredAddons[] = {"A3_Ui_F"};
+        // A3_3DEN so Cfg3DEN >> EventHandlers exists when this config adds its class.
+        requiredAddons[] = {"A3_Ui_F", "A3_3DEN"};
         // hashValue (fn_onExec) needs Arma 2.10+ (2022).
         requiredVersion = 2.10;
         version = "0.5.14";
@@ -38,6 +39,10 @@ class CfgFunctions {
 
             class initServer {};
             class initClient {};
+            // Eden editor bridge. Called from Cfg3DEN >> EventHandlers below,
+            // because postInit does not run in the editor.
+            class initEditor {};
+            class stopEditor {};
 
             class poll {};
             class onExec {};
@@ -66,6 +71,22 @@ class CfgFunctions {
 
             class unitByName {};
             class openUrl {};
+        };
+    };
+};
+
+// Eden editor: the Functions Library skips postInit while is3DEN, so the bridge
+// starts from the editor's own events (BI's scripts hook the same class). Preview
+// runs a normal mission whose postInit starts the server bridge, so the editor
+// bridge stops when a preview starts and comes back when it ends.
+class Cfg3DEN {
+    class EventHandlers {
+        class AHC_ArmaMCP {
+            onTerrainNew = "call AHC_ArmaMCP_fnc_initEditor;";
+            onMissionNew = "call AHC_ArmaMCP_fnc_initEditor;";
+            onMissionLoad = "call AHC_ArmaMCP_fnc_initEditor;";
+            onMissionPreviewEnd = "call AHC_ArmaMCP_fnc_initEditor;";
+            onMissionPreview = "call AHC_ArmaMCP_fnc_stopEditor;";
         };
     };
 };

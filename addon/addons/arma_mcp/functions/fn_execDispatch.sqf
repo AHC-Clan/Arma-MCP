@@ -11,9 +11,16 @@
  *
  * Argument: [_reqId, _mode, _target, _code, _label].
  */
-if (!isServer) exitWith {};
+// The editor bridge (fn_initEditor) routes here too. isServer in the editor is
+// unverified, so is3DEN lets it through either way.
+if (!isServer && {!is3DEN}) exitWith {};
 params [["_reqId", ""], ["_mode", "server"], ["_target", ""], ["_code", ""], ["_label", ""]];
 _mode = toLower _mode;
+
+// The editor has no other machines: all and client have nobody to reach.
+if (is3DEN && {_mode != "server"}) exitWith {
+    ["server", _reqId, _label, format ["ERROR: mode '%1' is unavailable in the Eden editor (use server)", _mode]] call AHC_ArmaMCP_fnc_execResultIn;
+};
 
 switch (_mode) do {
     case "server": {

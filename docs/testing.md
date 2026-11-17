@@ -641,6 +641,40 @@ Arma 는 메시지로 보낸 클릭을 받지 않는다. 화면 도구로 누를
 
 `ARMA_MCP_CONNECT_HIDE` 는 시험 전용이다. 쉼표로 나눈 이름을 찾지 못한 것으로 친다.
 
+## 실게임 E2E: Eden 에디터 브리지와 `arma_eden_*`
+
+전제: 이 기능이 든 PBO(`fn_initEditor`, `fn_stopEditor`, `Cfg3DEN >> EventHandlers`)와 데몬. DLL 은 바뀌지 않았다.
+`dist\release\@AHC_ArmaMCP` 하나만 실어 BattlEye 없이 띄우고 메인 화면에서 에디터를 연다. 격리 데몬이면 그 파이프로 띄운다.
+사람이 에디터에서 만든 것을 툴이 바꾸므로, 시험은 빈 새 미션이나 시험용으로 복사한 미션에서 한다.
+
+아직 아무도 실게임으로 보지 않은 것이다. 각 단계의 결과와 RPT 근거를 이 표 아래에 적는다.
+
+| # | 실행 | 기대 | 실패하면 |
+|---|---|---|---|
+| 1 | Stratis 로 에디터를 연다 | RPT 에 `[ArmaMCP] editor bridge starting on Stratis (, gen 1)` 이 한 줄. `onTerrainNew` 와 `onMissionNew` 가 같은 프레임이면 줄이 하나, 아니면 둘이고 gen 이 오른다 | 줄이 없으면 `Cfg3DEN` 클래스가 병합되지 않았다. `configFile >> "Cfg3DEN" >> "EventHandlers" >> "AHC_ArmaMCP"` 를 디버그 콘솔에서 본다 |
+| 2 | `arma_status` | `linkPhase:"live"`, `bridgeReady:true`, `mission.editor:true`, hints 에 에디터 안내 | `pre-bridge` 에 머물면 에디터에서 `EachFrame` 이 돌지 않거나 `status` 가 접속을 못 본다 |
+| 3 | `arma_exec { code:"[is3DEN, isServer, isMultiplayer]" }` | `ARRAY: [true,...]`. **`isServer` 값을 여기에 적는다** | 결과가 오지 않으면 에디터에서 `ExtensionCallback` 이 안 불린다. DLL 의 `poll` 이 프레임을 돌려주게 바꾸는 후속 작업이 필요하다 |
+| 4 | `arma_exec { code:"1", mode:"all" }` | `ERROR: mode 'all' is unavailable in the Eden editor (use server)` | |
+| 5 | 에디터에 물체 몇 개를 놓고 `arma_eden_scene {}` | 놓은 것이 모두 나온다. `size` 가 사물 크기와 맞고 땅에 놓은 것은 `ground` | `size` 가 0 이면 에디터 엔티티의 `boundingBoxReal` 이 다르다. `z.attr` 와 `z.bottom` 의 관계를 적는다 |
+| 6 | 콘크리트 벽 하나의 id 로 `arma_eden_place { items:[{ class:"Land_CncBarrier_F", beside:{ id, side:"front" } }] }` | 벽 앞에 맞닿아 놓이고 `ground`. `overlaps` 에 그 벽이 없다. 에디터에서 새 물체가 선택돼 있다 | 겹치면 `create3DENEntity` 뒤 `rotation` 이 먹지 않았거나 크기 측정(`createSimpleObject`)이 다르다 |
+| 7 | 탁자 위에 `arma_eden_place { items:[{ class:"Land_Can_V3_F", on:<탁자 id> }] }` | 캔이 탁자 윗면에 있고 `ground`(탁자가 표면) | 뜨거나 묻히면 `set3DENAttribute "position"` 의 z 가 ATL 이 아니다. 실제 기준을 적는다 |
+| 8 | 경사진 곳에 건물을 `at:[x,y]` 로 | `sunk` 와 `slope` 가 함께 나온다 | |
+| 9 | Ctrl+Z 한 번, 또는 `arma_eden_edit { undo:1 }` | 7 에서 만든 캔만 사라진다(실행 취소 한 단계) | 여러 단계로 쪼개지면 `collect3DENHistory` 가 `isNil` 안에서 묶지 못한다 |
+| 10 | `arma_eden_edit { ops:[{ id:<6의 벽>, turn:90 }, { id:<다른 것>, by:[0,3] }] }` | 둘 다 바뀌고 Ctrl+Z 한 번에 둘 다 되돌아간다 | |
+| 11 | `arma_eden_look { ids:[...], views:["iso","top","front"] }` | 이미지 셋. `labels` 의 비율이 이미지 속 물체 자리와 맞다. 끝나면 카메라가 처음 자리다 | 첫 이미지가 옮기기 전 화면이면 `delayMs` 를 늘린다 |
+| 12 | 없는 클래스 `B_MRAP_01` 로 place | 아무것도 만들지 않고 `candidates` 에 `B_MRAP_01_F` 가 있다 | |
+| 13 | 미리보기(Play) 를 누른다 | RPT 에 `editor bridge stopped for preview` 뒤 `server bridge starting`. `arma_status` 의 `mission.editor:false` | 미리보기 브리지가 안 뜨면 `AHC_ArmaMCP_serverInit` 이 남았다(에디터가 missionNamespace 를 미리보기에 넘긴다) |
+| 14 | 미리보기를 끝낸다 | `editor bridge starting ... gen N+1`, `mission.editor:true`. `arma_eden_scene` 이 다시 된다 | 미리보기의 `EachFrame` 이 남아 `poll` 이 두 번 돌면 RPT 의 `[EXEC] result` 가 겹친다. 그때 `fn_initServer` 의 처리기에도 세대 확인을 넣는다 |
+| 15 | 다른 미션을 연다(`MissionLoad`) | 연결이 다시 서고 gen 이 오른다. RPT 에 매 프레임 오류가 없다 | |
+| 16 | 에디터를 닫고 메인 화면으로 | 15초 안에 `linkPhase` 가 `none` 이나 `pre-bridge`. 메인 화면 연결 창이 그대로 동작한다 | |
+| 17 | 회귀: 같은 PBO 로 `arma-mcp play --modset none` | 미션 브리지가 전과 같다. RPT 오류가 없다 | |
+
+체크포인트.
+
+- 3, 6, 7, 9 가 이 기능의 수용 기준이다. 3 은 exec 경로 전체(`ExtensionCallback`, `isServer` 우회, spawn), 6 과 7 은 크기와 높이 기준,
+  9 는 실행 취소 묶음이다.
+- 에디터는 저장하지 않았으므로 끝나면 미션을 저장하지 않고 닫는다.
+
 ## 알려진 한계
 
 - `<nil>` 은 정상 nil 과 엔진이 삼킨 soft error 를 인밴드로 구분할 수 없다 — RPT 가 유일한 진실(`rptErrors` 자동 첨부로 대응).

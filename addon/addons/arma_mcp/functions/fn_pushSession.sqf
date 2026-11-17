@@ -51,8 +51,10 @@ private _hasTacMap = call AHC_ArmaMCP_fnc_hasTacMap;
 // say so instead of the agent guessing.
 private _hasZeusTool = isClass (configFile >> "CfgPatches" >> "AHC_ZeusTool");
 
+// editor: 1 while the Eden editor bridge (fn_initEditor) is the sender. Older
+// PBOs leave the field out and the daemon keeps it unknown.
 private _body = format [
-    "{""world"":""%1"",""mission"":""%2"",""briefing"":""%3"",""server"":""%4"",""dedicated"":%5,""multiplayer"":%6,""cba"":%7,""ace"":%8,""aceVersion"":""%9"",""aceComponents"":%10,""tacmap"":%11,""tacmapZeusTool"":%12,""t"":%13}",
+    "{""world"":""%1"",""mission"":""%2"",""briefing"":""%3"",""server"":""%4"",""dedicated"":%5,""multiplayer"":%6,""cba"":%7,""ace"":%8,""aceVersion"":""%9"",""aceComponents"":%10,""tacmap"":%11,""tacmapZeusTool"":%12,""editor"":%13,""t"":%14}",
     [worldName] call AHC_ArmaMCP_fnc_jsonEsc,
     [missionName] call AHC_ArmaMCP_fnc_jsonEsc,
     [briefingName] call AHC_ArmaMCP_fnc_jsonEsc,
@@ -65,6 +67,7 @@ private _body = format [
     _aceCompsJson,
     (parseNumber _hasTacMap),
     (parseNumber _hasZeusTool),
+    (parseNumber is3DEN),
     round time
 ];
 EXTENSION callExtension ["pushSession", [_body]];
