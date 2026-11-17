@@ -675,6 +675,23 @@ Arma 는 메시지로 보낸 클릭을 받지 않는다. 화면 도구로 누를
   9 는 실행 취소 묶음이다.
 - 에디터는 저장하지 않았으므로 끝나면 미션을 저장하지 않고 닫는다.
 
+2026-11-17 첫 실행(Arma 3 2.22, Fjord(Global Ops Terrains), 저장소 데몬 0.5.14, BattlEye 없음). HEMTT 가 없어 PBO 는 바이너리화 없이
+원본 파일을 그대로 묶었고(config.cpp, sqf, stringtable.xml), DLL 은 바뀌지 않아 워크숍의 0.5.11 을 썼다.
+에디터는 빈 미션의 `mission.sqm` 경로를 실행 인자로 줘서 바로 열었다.
+
+- 1: `editor bridge starting on go_map_fjord (mcp_eden_test, gen 1)` 과 같은 초의 `gen 2` 두 줄. 실행 결과가 겹치지 않았다.
+- 2: `game live, go_map_fjord, mcp_eden_test, 브리지 준비됨`.
+- 3: `[true,true,false,true,0]`. 에디터에서 `ExtensionCallback` 이 불리고 **`isServer` 는 `true`** 다.
+- 4: `ERROR: mode 'all' is unavailable in the Eden editor (use server)`. CLI 가 그 뒤에 nil 안내 줄을 하나 더 찍는다(표시만의 문제).
+- 5: 놓은 건물 하나가 나오고 `size [6.24,8.86,4.86]`, `ground`.
+- 놓기: 댐(2276, 1157) 동쪽 호숫가 `at:[2404,1081]`, `face:[2276,1157]` 로 `Land_Cargo_House_V1_F`. `dir 300.7`, `ground`, `slope 0.46`,
+  옆 전나무와 상자 겹침 1.67 m. 직접 잰 값과 같았다: 상자 바닥 357.16, 네 모서리 아래 지형 356.71~357.16(한 모서리가 닿음).
+  위치 속성 z 는 1.95 로 `getPosATL` 과 같다(ATL). 크기 측정(`createSimpleObject`)은 에디터 엔티티의 `boundingBoxReal` 과 같았다.
+- 11: `iso` 하나로 카메라가 옮겨지고 `labels` 가 `0.5, 0.5` 였다. 다만 카메라가 나무 속에 들어가 건물을 가렸다. 시점은 가림을 보지 않는다.
+- 12: `B_MRAP_01` 은 만들지 않고 후보 `B_MRAP_01_F`, `B_MRAP_01_gmg_F`, `B_MRAP_01_hm`.
+- RPT 의 스크립트 오류 0 줄.
+- 못 본 것: 6, 7(탁자 위), 8, 9·10(실행 취소 묶음), 13~17(미리보기, 다른 미션, 회귀). HEMTT 빌드(lint, 바이너리화)도 아직이다.
+
 ## 알려진 한계
 
 - `<nil>` 은 정상 nil 과 엔진이 삼킨 soft error 를 인밴드로 구분할 수 없다 — RPT 가 유일한 진실(`rptErrors` 자동 첨부로 대응).
