@@ -9,7 +9,7 @@
 // toFixed 2 로 찍어 쉼표로 이은 문자열 하나(geom 열)로 보낸다. TS 가 mapRow 로 되읽는다.
 //
 // 편집은 collect3DENHistory 로 묶어 호출 한 번이 에디터의 실행 취소 한 단계가 되게 한다
-// (BI 의 fn_3DENOnKeyDown 이 같은 방식으로 엔티티를 만든다).
+// (BI 의 fn_3den_onKeyDown 이 같은 방식으로 엔티티를 만든다).
 
 import { sqfNumber, sqfString, sqfStringArray } from '../mcp/sqfLiteral.js';
 import { CUT, FIELD_MAX, PAGE_BUDGET, storePages } from '../zeus/zeusSqf.js';
